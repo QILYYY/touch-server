@@ -76,10 +76,29 @@
             z-index: 999; pointer-events: none; opacity: 0; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #touch-overlay.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        /* Панель для записи ритма */
+        #rhythm-overlay {
+            position: fixed; inset: 0; background: rgba(11, 11, 14, 0.95);
+            z-index: 10000; display: none; flex-direction: column;
+            align-items: center; justify-content: center; gap: 20px;
+        }
+        .rhythm-pad {
+            width: 200px; height: 200px; border-radius: 50%;
+            background: radial-gradient(circle, #7209b7, #3f076b);
+            box-shadow: 0 0 30px rgba(114, 9, 183, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.1rem; color: #fff;
+            border: 3px solid #ff3366; animation: pulse 1.5s infinite;
+        }
     </style>
 </head>
 <body>
-
+    <div id="rhythm-overlay">
+        <div class="rhythm-pad">СТУЧИ СЮДА</div>
+        <p style="color: #888; font-size: 0.9rem; text-align: center; padding: 0 20px;">
+            Держи кнопку «Запись Ритма» внизу и отстукивай таккт здесь!
+        </p>
+    </div>
     <div id="pairing-screen">
         <h2 style="margin: 0; font-weight: 800; letter-spacing: 1px;">Прикосновения 2.0 💫</h2>
         <p style="color: #555566; font-size: 0.85rem; margin: 0 0 10px 0;">Создайте или введите код комнаты</p>
@@ -303,21 +322,64 @@
 
         // ================= ИДЕЯ 4: РЕЖИМ ЗАПИСИ СВОЕГО РИТМА =================
         rhythmBtn.addEventListener('pointerdown', (e) => {
+        // Элемент окна записи
+        const rhythmOverlay = document.getElementById('rhythm-overlay');
+        const rhythmPad = document.querySelector('.rhythm-pad');
+
+        // Включение режима записи при зажатии кнопки
+        rhythmBtn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Блокируем утечку клика на холст
+            
             isRecordingRhythm = true;
             rhythmStartTime = Date.now();
             recordedTaps = [];
-            rhythmBtn.textContent = "🔴 Стучи по экрану...";
+            
+            rhythmBtn.textContent = "🔴 Запись идёт...";
+            rhythmOverlay.style.display = 'flex'; // Показываем окно для стука
+            
             if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         });
 
+        // Отстукивание ритма строго внутри пэда
+        rhythmPad.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!isRecordingRhythm) return;
+            
+            const offset = Date.now() - rhythmStartTime;
+            recordedTaps.push(offset);
+            
+            // Даем визуальный отклик на пэде
+            drawCircle(canvas.width / 2, canvas.height / 2, '#7209b7');
+            triggerHaptic('tap'); // Вибрируем при записи, чтобы чувствовать темп
+        });
+
+        // Завершение записи, когда отпускаешь кнопку внизу
         rhythmBtn.addEventListener('pointerup', (e) => {
             e.preventDefault();
+            if (!isRecordingRhythm) return;
+            
             isRecordingRhythm = false;
             rhythmBtn.textContent = "Запись Ритма 🥁";
+            rhythmOverlay.style.style.display = 'none'; // Прячем окно
+            
             if (recordedTaps.length > 0) {
                 sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
-                alert('Твой кастомный ритм отправлен партнеру!');
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            }
+        });
+
+        // Подстраховка: если палец соскользнул с кнопки наружу экрана
+        rhythmBtn.addEventListener('pointerleave', (e) => {
+            if (isRecordingRhythm) {
+                isRecordingRhythm = false;
+                rhythmBtn.textContent = "Запись Ритма 🥁";
+                rhythmOverlay.style.display = 'none';
+                if (recordedTaps.length > 0) {
+                    sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
+                }
             }
         });
 
