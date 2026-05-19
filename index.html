@@ -190,50 +190,49 @@
 
         // Функция нативной вибрации Telegram WebApp (работает на iOS)
                 // [УСИЛЕННАЯ ВИБРАЦИЯ ДЛЯ IPHONE]: Работает нативно и без сбоев
+                // [МАКСИМАЛЬНАЯ ВИБРАЦИЯ ДЛЯ IPHONE]: Использование системных уведомлений на полную мощность
         function triggerTelegramHaptic(mode) {
             if (!tg || !tg.HapticFeedback) return;
             
             try {
                 switch(mode) {
                     case 'tap':
-                        // Легкий, четкий одиночный удар (как при вводе текста)
-                        tg.HapticFeedback.impactOccurred('light');
+                        // Одиночный, но максимально сильный и резкий толчок
+                        tg.HapticFeedback.impactOccurred('heavy');
                         break;
                         
                     case 'heartbeat':
-                        // Двойной глубокий удар (имитация стука сердца)
-                        // Используем rigid для жесткого толчка и heavy для сильного удара
-                        tg.HapticFeedback.impactOccurred('rigid');
+                        // Настоящий мощный двойной удар сердца: два тяжелых толчка подряд
+                        tg.HapticFeedback.impactOccurred('heavy');
                         setTimeout(() => {
                             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
-                        }, 120);
+                        }, 140); // Идеальная пауза, чтобы iPhone успел ударить второй раз
                         break;
                         
                     case 'hug':
-                        // Мощная, продолжительная вибрация успеха (три микро-вибрации вместе)
+                        // Объятие: Глубокая, тройная пульсирующая вибрация (максимальная сила iOS)
                         tg.HapticFeedback.notificationOccurred('success');
                         break;
                         
                     case 'kiss':
-                        // Серия нежных, нарастающих прикосновений (от легкого к среднему)
-                        tg.HapticFeedback.impactOccurred('light');
+                        // Поцелуй: Особый прерывистый рисунок из трех быстрых ударов (сначала предупреждение, потом жесткий толчок)
+                        tg.HapticFeedback.notificationOccurred('warning');
                         setTimeout(() => {
-                            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                        }, 150);
+                            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+                        }, 250);
                         break;
                         
                     case 'tickle':
-                        // Быстрое «щекочущее» дребезжание
-                        // Из-за ограничений iOS делаем 3 быстрых удара с увеличенным интервалом
-                        tg.HapticFeedback.impactOccurred('soft');
-                        setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft'); }, 100);
-                        setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft'); }, 200);
+                        // Щекотка: Мощное, быстрое и агрессивное дребезжание (эффект ошибки/тревоги)
+                        // Заставляет вибромотор быстро прокрутить серию из 3-4 жестких микро-ударов
+                        tg.HapticFeedback.notificationOccurred('error');
                         break;
                 }
             } catch (e) { 
                 console.error('Ошибка haptic:', e); 
             }
         }
+
 
 
         function playTouchSound(mode) {
