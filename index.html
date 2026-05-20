@@ -3,122 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Прикосновения 2.0 💫</title>
+    <title>Прикосновения Универсал 💫</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, sans-serif; user-select: none; }
+        
+        /* Базовые стили тем */
         body {
             margin: 0; padding: 10px; height: 100vh;
-            background-color: #0b0b0e; color: #fff;
-            display: flex; flex-direction: column; justify-content: space-between;
-            overflow: hidden; transition: background-color 0.3s ease;
+            color: #fff; display: flex; flex-direction: column; justify-content: space-between;
+            overflow: hidden; transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Интерактивные вспышки */
-        body.touch-tap { background-color: #00b4d8; }
-        body.touch-heartbeat { background-color: #ff4d6d; }
-        body.touch-hug { background-color: #7209b7; }
-        body.touch-kiss { background-color: #ff758f; }
-        body.touch-tickle { background-color: #ffb703; }
-        body.combo-active { background-color: #38b000; }
+        /* Цветовые схемы (Темы) */
+        body.theme-dark { background-color: #0b0b0e; --panel-bg: #15151f; --accent: #ff3366; --border: #232336; }
+        body.theme-cyber { background-color: #050515; --panel-bg: #0b0b26; --accent: #00f0ff; --border: #00ff66; }
+        body.theme-pastel { background-color: #1a1525; --panel-bg: #2d223c; --accent: #ff758f; --border: #7209b7; }
 
-        /* Экран сопряжения */
-        #pairing-screen {
-            position: fixed; inset: 0; background: #0b0b0e; z-index: 99999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px;
-        }
-        .input-field {
-            width: 100%; max-width: 280px; background: #15151f; border: 1px solid #2d2d3f; padding: 14px;
-            border-radius: 14px; color: #fff; text-align: center; font-size: 1.1rem; outline: none;
-        }
-        .primary-btn {
-            width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 14px;
-            border-radius: 14px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer;
-        }
+        /* Вспышки фонов при тапах */
+        body.touch-tap { background-color: #00b4d8 !important; }
+        body.touch-heartbeat { background-color: #ff4d6d !important; }
+        body.touch-hug { background-color: #7209b7 !important; }
+        body.touch-kiss { background-color: #ff758f !important; }
+        body.touch-tickle { background-color: #ffb703 !important; }
+        body.combo-active { background-color: #38b000 !important; }
 
-        header { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #15151f; }
+        /* Элементы шапки */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
         .status-badge {
             display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem;
-            background: #15151f; padding: 4px 12px; border-radius: 20px; color: #888;
+            background: var(--panel-bg); padding: 4px 12px; border-radius: 20px; color: #888;
         }
         .status-badge.online { color: #4caf50; background: rgba(76, 175, 80, 0.1); }
         .status-badge .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; }
         .status-badge.online .dot { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
 
-        /* Игровое поле с холстом */
+        /* Блок статуса настроения */
+        .status-bar { display: flex; gap: 8px; justify-content: center; padding: 5px 0; }
+        .status-bubble { background: var(--panel-bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .status-bubble.active { border-color: var(--accent); background: rgba(255,51,102,0.1); }
+
+        /* Игровая интерактивная зона */
         .interactive-zone {
-            position: relative; flex-grow: 1; margin: 10px 0;
-            background: linear-gradient(145deg, #101017, #07070a);
-            border: 2px dashed #232336; border-radius: 24px; overflow: hidden;
+            position: relative; flex-grow: 1; margin: 8px 0;
+            background: linear-gradient(145deg, rgba(20,20,30,0.4), rgba(10,10,15,0.4));
+            border: 2px dashed var(--border); border-radius: 24px; overflow: hidden;
         }
         #touch-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; }
         
-        /* Кнопка "Поймай комбо" */
         #combo-trigger-btn {
             position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: #ff3366; border: none; padding: 10px 20px;
+            z-index: 100; background: var(--accent); border: none; padding: 10px 20px;
             border-radius: 20px; font-weight: bold; font-size: 0.85rem; color: white;
-            box-shadow: 0 0 15px rgba(255, 51, 102, 0.5); display: none; animation: pulse 1.5s infinite;
+            box-shadow: 0 0 15px var(--accent); display: none; animation: pulse 1.2s infinite;
         }
-        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } 100% { transform: translateX(-50%) scale(1); } }
+        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); } }
 
         /* Панель режимов */
-        .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
-        .mode-btn { background: #13131c; border: 1px solid #222233; color: #a0a0b0; padding: 10px 4px; border-radius: 12px; cursor: pointer; font-size: 0.75rem; }
-        .mode-btn.active { background: #ff3366; color: #fff; border-color: #ff3366; font-weight: bold; }
+        .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+        .mode-btn { background: var(--panel-bg); border: 1px solid var(--border); color: #a0a0b0; padding: 10px 4px; border-radius: 12px; cursor: pointer; font-size: 0.75rem; }
+        .mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: bold; }
         .mode-btn.special { background: #7209b7; color: #fff; border-color: #7209b7; }
 
-        /* [ФИКС СЛОЕВ]: Всплывающее уведомление НАД холстом (z-index: 9999) */
+        /* Всплывающие уведомления посередине */
         #touch-overlay {
             position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            background: rgba(15, 15, 25, 0.95); border: 2px solid #ff3366; padding: 15px 25px;
+            background: rgba(15, 15, 25, 0.95); border: 2px solid var(--accent); padding: 15px 25px;
             border-radius: 20px; font-size: 1.3rem; font-weight: bold; text-align: center;
-            z-index: 9999; pointer-events: none; opacity: 0; box-shadow: 0 10px 30px rgba(255, 51, 102, 0.4);
+            z-index: 9999; pointer-events: none; opacity: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #touch-overlay.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-        /* Панель для записи ритма */
+        /* Оверлей для записи ритма */
         #rhythm-overlay {
             position: fixed; inset: 0; background: rgba(11, 11, 14, 0.95);
-            z-index: 10000; display: none; flex-direction: column;
-            align-items: center; justify-content: center; gap: 20px;
+            z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
         }
-        .rhythm-pad {
-            width: 200px; height: 200px; border-radius: 50%;
-            background: radial-gradient(circle, #7209b7, #3f076b);
-            box-shadow: 0 0 30px rgba(114, 9, 183, 0.6);
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 1.1rem; color: #fff;
-            border: 3px solid #ff3366;
-        }
+        .rhythm-pad { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #7209b7, #3f076b); display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid var(--accent); }
+
+        /* Настройки темы в углу */
+        .theme-selector { display: flex; gap: 5px; background: var(--panel-bg); padding: 4px; border-radius: 12px; }
+        .theme-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 1px solid #fff; }
+
+        /* Экран авторизации */
+        #pairing-screen { position: fixed; inset: 0; background: #0b0b0e; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
     </style>
 </head>
-<body>
+<body class="theme-dark">
 
     <div id="touch-overlay"></div>
 
     <div id="rhythm-overlay">
         <div class="rhythm-pad">СТУЧИ СЮДА</div>
-        <p style="color: #888; font-size: 0.9rem; text-align: center; padding: 0 20px; max-width: 280px;">
-            Удерживай кнопку ритма внизу и отстукивай такт на этом фиолетовом круге!
-        </p>
+        <p style="color: #888; font-size: 0.85rem; text-align: center; max-width: 250px;">Отстукивай ритм пальцем по кругу!</p>
     </div>
 
     <div id="pairing-screen">
-        <h2 style="margin: 0; font-weight: 800; letter-spacing: 1px;">Прикосновения 2.0 💫</h2>
-        <p style="color: #555566; font-size: 0.85rem; margin: 0 0 10px 0;">Создайте или введите код комнаты</p>
-        <input type="text" id="room-input" class="input-field" placeholder="Код вашей комнаты" autocomplete="off">
-        <button id="connect-btn" class="primary-btn">Войти в пространство</button>
+        <h2 style="margin:0;">Прикосновения Ультра 💫</h2>
+        <input type="text" id="room-input" class="input-field" placeholder="Код комнаты">
+        <button id="connect-btn" class="primary-btn">Войти</button>
     </div>
 
     <header>
         <div>
-            <div id="room-title" style="font-weight: bold; font-size: 0.9rem; color: #888;">Комната: ---</div>
-            <div id="status-badge" class="status-badge"><div class="dot"></div> <span id="status-text">Синхронизация...</span></div>
+            <div id="score-display" style="font-weight: bold; font-size: 0.9rem; color: var(--accent);">Уровень связи: 1 (0 Комбо) ❤️</div>
+            <div id="status-badge" class="status-badge"><div class="dot"></div> <span id="status-text">Поиск...</span></div>
         </div>
-        <div style="font-size: 0.75rem; color: #ff3366; font-weight: bold; letter-spacing: 0.5px;">КОМБО РЕЖИМ ⚡</div>
+        <div class="theme-selector">
+            <div class="theme-dot" style="background: #ff3366;" onclick="changeTheme('dark', true)"></div>
+            <div class="theme-dot" style="background: #00f0ff;" onclick="changeTheme('cyber', true)"></div>
+            <div class="theme-dot" style="background: #ff758f;" onclick="changeTheme('pastel', true)"></div>
+        </div>
     </header>
+
+    <div class="status-bar">
+        <div class="status-bubble" data-status="⏳ Занят(а)">⏳ Занят</div>
+        <div class="status-bubble" data-status="💔 Скучаю">💔 Скучаю</div>
+        <div class="status-bubble" data-status="☕ Отдыхаю">☕ Отдыхаю</div>
+        <div id="partner-status" style="font-size: 0.8rem; color: #888; align-self: center; margin-left: auto;">Партнер: --</div>
+    </div>
 
     <div class="interactive-zone" id="zone">
         <button id="combo-trigger-btn">ПОЙМАТЬ КАСАНИЕ 🤝</button>
@@ -140,11 +144,9 @@
 
         const ws = new WebSocket('wss://touch-server-emiy.onrender.com');
 
-        // Элементы UI
         const pairingScreen = document.getElementById('pairing-screen');
         const roomInput = document.getElementById('room-input');
         const connectBtn = document.getElementById('connect-btn');
-        const roomTitle = document.getElementById('room-title');
         const badge = document.getElementById('status-badge');
         const statusText = document.getElementById('status-text');
         const canvas = document.getElementById('touch-canvas');
@@ -154,24 +156,25 @@
         const rhythmBtn = document.getElementById('rhythm-btn');
         const rhythmOverlay = document.getElementById('rhythm-overlay');
         const rhythmPad = document.querySelector('.rhythm-pad');
+        const scoreDisplay = document.getElementById('score-display');
+        const partnerStatusEl = document.getElementById('partner-status');
 
         let currentMode = 'tap';
         let isDrawing = false;
         let comboActiveByPartner = false;
         let comboTimeout = null;
+        let particles = [];
 
         let isRecordingRhythm = false;
         let rhythmStartTime = 0;
         let recordedTaps = [];
 
-        // Тексты для всплывающих надписей
+        let comboScore = parseInt(localStorage.getItem('touch_combo_score') || '0');
+
         const overlayTexts = {
-            tap: "Тык! ⚡", 
-            heartbeat: "Тук-тук... Стук сердца ❤️",
-            hug: "Вас крепко обняли! 🫂", 
-            kiss: "Сладкий поцелуй! 💋",
-            combo: "ИДЕАЛЬНОЕ СОВПАДЕНИЕ! 💚🌟", 
-            custom: "Вам прислали личный ритм! 🥁"
+            tap: "Тык! ⚡", heartbeat: "Стук сердца... ❤️",
+            hug: "Вас нежно обняли! 🫂", kiss: "Сладкий поцелуй! 💋",
+            combo: "ИДЕАЛЬНОЕ СОВПАДЕНИЕ! 💚🌟", custom: "Вам прислали личный ритм! 🥁"
         };
 
         function resizeCanvas() {
@@ -181,11 +184,13 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
+        // Загрузка сохраненного состояния
+        updateScoreUI();
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
-            ws.onopen = () => { startApp(roomInput.value.trim()); };
+            ws.onopen = () => startApp(roomInput.value.trim());
         } else {
-            const savedRoom = localStorage.getItem('tg_room_code_v2');
+            const savedRoom = localStorage.getItem('tg_room_code_v3');
             if (savedRoom) roomInput.value = savedRoom;
         }
 
@@ -196,60 +201,91 @@
         });
 
         function startApp(roomCode) {
-            localStorage.setItem('tg_room_code_v2', roomCode);
+            localStorage.setItem('tg_room_code_v3', roomCode);
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'join', room: roomCode }));
             pairingScreen.style.display = 'none';
             resizeCanvas();
         }
 
-        document.querySelectorAll('.mode-btn:not(.special)').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const activeBtn = document.querySelector('.mode-btn.active');
-                if (activeBtn) activeBtn.classList.remove('active');
-                btn.classList.add('active');
-                currentMode = btn.dataset.mode;
-                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-            });
-        });
+        function changeTheme(themeName, sendNet = false) {
+            document.body.className = '';
+            document.body.classList.add('theme-' + themeName);
+            if (sendNet) sendNetData({ type: 'change_theme', theme: themeName });
+        }
 
-        // ================= ЭКСТРЕМАЛЬНАЯ ВИБРАЦИЯ ДЛЯ IPHONE =================
+        function updateScoreUI() {
+            let level = Math.floor(comboScore / 5) + 1;
+            scoreDisplay.textContent = `Уровень связи: ${level} (${comboScore} Комбо) ❤️`;
+            localStorage.setItem('touch_combo_score', comboScore);
+        }
+
+        // ================= СИСТЕМА НЕОНОВЫХ ЧАСТИЦ (ИДЕЯ 1) =================
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 6 + 4;
+                this.speedX = (Math.random() - 0.5) * 6;
+                this.speedY = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.color = color;
+                this.type = Math.random() > 0.5 ? 'star' : 'heart';
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.alpha -= 0.02;
+            }
+            draw() {
+                ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
+                ctx.beginPath();
+                if (this.type === 'star') {
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                } else {
+                    // Простая отрисовка сердечка
+                    ctx.moveTo(this.x, this.y);
+                    ctx.bezierCurveTo(this.x - this.size/2, this.y - this.size/2, this.x - this.size, this.y + this.size/3, this.x, this.y + this.size);
+                    ctx.bezierCurveTo(this.x + this.size, this.y + this.size/3, this.x + this.size/2, this.y - this.size/2, this.x, this.y);
+                }
+                ctx.fill(); ctx.restore();
+            }
+        }
+
+        function spawnParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) { particles.push(new Particle(x, y, color)); }
+        }
+
+        function animateParticles() {
+            // Очищаем хвосты рисования, но сохраняем частицы
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles = particles.filter(p => p.alpha > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // ================= НАТИВНЫЕ ВИБРАЦИИ =================
         function triggerHaptic(mode) {
             if (!tg || !tg.HapticFeedback) return;
             try {
                 if (mode === 'tap') {
                     tg.HapticFeedback.impactOccurred('heavy');
                     tg.HapticFeedback.impactOccurred('rigid');
-                    tg.HapticFeedback.impactOccurred('heavy');
                 } else if (mode === 'heartbeat') {
                     tg.HapticFeedback.notificationOccurred('warning');
                     setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning'); }, 180);
                 } else if (mode === 'hug') {
                     tg.HapticFeedback.notificationOccurred('success');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error'); }, 100);
                 } else if (mode === 'kiss') {
                     tg.HapticFeedback.impactOccurred('heavy');
                     setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 80);
                 } else if (mode === 'combo') {
                     tg.HapticFeedback.notificationOccurred('success');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 200);
+                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 150);
                 } else if (mode === 'draw_vibe') {
                     tg.HapticFeedback.impactOccurred('soft');
                 }
             } catch(e) {}
         }
 
-        function playCustomRhythm(taps) {
-            if (taps.length === 0) return;
-            showOverlay('custom');
-            taps.forEach(delay => {
-                setTimeout(() => {
-                    triggerHaptic('tap');
-                    drawCircle(canvas.width / 2, canvas.height / 2, '#7209b7');
-                }, delay);
-            });
-        }
-
-        // Показ всплывающего текста по центру экрана
         function showOverlay(type) {
             if (overlayTexts[type]) {
                 touchOverlay.textContent = overlayTexts[type];
@@ -258,30 +294,18 @@
             }
         }
 
-        function drawCircle(x, y, color) {
-            ctx.beginPath();
-            ctx.arc(x, y, 35, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.6;
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-            setTimeout(() => { ctx.clearRect(x - 50, y - 50, 100, 100); }, 400);
-        }
-
-        // ================= ОБРАБОТКА НАЖАТИЙ НА ЭКРАН =================
+        // ================= КЛИКИ ПО ЭКРАНУ И СТАТУСАМ =================
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            const activeColor = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#ff3366';
 
             if (currentMode === 'draw') {
                 isDrawing = true;
-                sendNetData({ type: 'draw_start', x, y });
-                ctx.beginPath(); ctx.moveTo(x, y);
-                ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+                sendNetData({ type: 'draw_start', x, y, color: activeColor });
             } else {
-                sendNetData({ type: 'touch', pattern: currentMode, x, y });
-                drawCircle(x, y, '#00b4d8');
+                sendNetData({ type: 'touch', pattern: currentMode, x, y, color: activeColor });
+                spawnParticles(x, y, activeColor);
                 sendNetData({ type: 'combo_window_open' });
             }
         });
@@ -289,22 +313,32 @@
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing || currentMode !== 'draw') return;
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            const activeColor = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#ff3366';
 
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            sendNetData({ type: 'draw_move', x, y });
+            sendNetData({ type: 'draw_move', x, y, color: activeColor });
+            spawnParticles(x, y, activeColor);
             triggerHaptic('draw_vibe');
         });
 
-        canvas.addEventListener('pointerup', () => {
-            if (currentMode === 'draw') {
-                isDrawing = false;
-                sendNetData({ type: 'draw_end' });
-            }
+        canvas.addEventListener('pointerup', () => { isDrawing = false; });
+
+        // Статусы настроения (Идея 4)
+        document.querySelectorAll('.status-bubble').forEach(el => {
+            el.addEventListener('click', () => {
+                const alreadyActive = el.classList.contains('active');
+                document.querySelectorAll('.status-bubble').forEach(b => b.classList.remove('active'));
+                
+                let currentStatus = "Обычное";
+                if (!alreadyActive) {
+                    el.classList.add('active');
+                    currentStatus = el.dataset.status;
+                }
+                sendNetData({ type: 'change_status', status: currentStatus });
+            });
         });
 
+        // Комбо клик (Идея 2)
         comboBtn.addEventListener('click', () => {
             if (comboActiveByPartner) {
                 sendNetData({ type: 'combo_match_success' });
@@ -313,57 +347,35 @@
         });
 
         function handleComboSuccess() {
-            comboBtn.style.display = 'none';
-            comboActiveByPartner = false;
+            comboBtn.style.display = 'none'; comboActiveByPartner = false;
             document.body.classList.add('combo-active');
-            showOverlay('combo');
-            triggerHaptic('combo');
+            showOverlay('combo'); triggerHaptic('combo');
+            comboScore++; updateScoreUI();
             setTimeout(() => document.body.classList.remove('combo-active'), 1500);
         }
 
-        // ================= ИСПРАВЛЕННАЯ ЗАПИСЬ РИТМА =================
+        // ================= ЗАПИСЬ РИТМА (ИДЕЯ 3) =================
         rhythmBtn.addEventListener('pointerdown', (e) => {
             e.preventDefault(); e.stopPropagation();
-            isRecordingRhythm = true;
-            rhythmStartTime = Date.now();
-            recordedTaps = [];
-            rhythmBtn.textContent = "🔴 Запись идёт...";
-            rhythmOverlay.style.display = 'flex';
+            isRecordingRhythm = true; rhythmStartTime = Date.now(); recordedTaps = [];
+            rhythmBtn.textContent = "🔴 Запись..."; rhythmOverlay.style.display = 'flex';
             if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         });
 
         rhythmPad.addEventListener('pointerdown', (e) => {
             e.preventDefault(); e.stopPropagation();
             if (!isRecordingRhythm) return;
-            const offset = Date.now() - rhythmStartTime;
-            recordedTaps.push(offset);
+            recordedTaps.push(Date.now() - rhythmStartTime);
             triggerHaptic('tap');
         });
 
         rhythmBtn.addEventListener('pointerup', (e) => {
-            e.preventDefault();
-            if (!isRecordingRhythm) return;
-            isRecordingRhythm = false;
-            rhythmBtn.textContent = "Запись Ритма 🥁";
-            rhythmOverlay.style.display = 'none';
-            if (recordedTaps.length > 0) {
-                sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
-                if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            }
+            e.preventDefault(); if (!isRecordingRhythm) return;
+            isRecordingRhythm = false; rhythmBtn.textContent = "Запись Ритма 🥁"; rhythmOverlay.style.display = 'none';
+            if (recordedTaps.length > 0) sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
         });
 
-        rhythmBtn.addEventListener('pointerleave', (e) => {
-            if (isRecordingRhythm) {
-                isRecordingRhythm = false;
-                rhythmBtn.textContent = "Запись Ритма 🥁";
-                rhythmOverlay.style.display = 'none';
-                if (recordedTaps.length > 0) {
-                    sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
-                }
-            }
-        });
-
-        // ================= ПРИЕМ ДАННЫХ ИЗ СЕТИ =================
+        // ================= ПРИЕМ СЕТЕВЫХ СИГНАЛОВ =================
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
@@ -375,42 +387,39 @@
                 }
             } 
             else if (data.type === 'touch') {
-                triggerHaptic(data.pattern);
-                showOverlay(data.pattern); // [РАБОТАЕТ!]: Всплывающая надпись на событие партнера
-                drawCircle(data.x || canvas.width/2, data.y || canvas.height/2, '#ff4d6d');
-                
-                const className = "touch-" + data.pattern;
-                document.body.classList.add(className);
-                setTimeout(() => document.body.classList.remove(className), 500);
+                triggerHaptic(data.pattern); showOverlay(data.pattern);
+                spawnParticles(data.x || canvas.width/2, data.y || canvas.height/2, data.color || '#ff4d6d');
+                document.body.classList.add("touch-" + data.pattern);
+                setTimeout(() => document.body.classList.remove("touch-" + data.pattern), 500);
             }
-            else if (data.type === 'draw_start') {
-                ctx.beginPath(); ctx.moveTo(data.x, data.y);
-                ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-            } else if (data.type === 'draw_move') {
-                ctx.lineTo(data.x, data.y); ctx.stroke();
+            else if (data.type === 'draw_start' || data.type === 'draw_move') {
+                spawnParticles(data.x, data.y, data.color || '#00b4d8');
                 triggerHaptic('draw_vibe');
-            } else if (data.type === 'draw_end') {
-                setTimeout(() => ctx.clearRect(0,0,canvas.width,canvas.height), 1000);
             }
             else if (data.type === 'combo_window_open') {
-                comboActiveByPartner = true;
-                comboBtn.style.display = 'block';
+                comboActiveByPartner = true; comboBtn.style.display = 'block';
                 clearTimeout(comboTimeout);
-                comboTimeout = setTimeout(() => {
-                    comboBtn.style.display = 'none';
-                    comboActiveByPartner = false;
-                }, 1500);
-            } else if (data.type === 'combo_match_success') {
-                handleComboSuccess();
-            }
+                comboTimeout = setTimeout(() => { comboBtn.style.display = 'none'; comboActiveByPartner = false; }, 1500);
+            } 
+            else if (data.type === 'combo_match_success') { handleComboSuccess(); }
             else if (data.type === 'custom_rhythm') {
-                playCustomRhythm(data.taps);
+                showOverlay('custom');
+                data.taps.forEach(delay => {
+                    setTimeout(() => { triggerHaptic('tap'); spawnParticles(canvas.width/2, canvas.height/2, '#7209b7'); }, delay);
+                });
             }
+            else if (data.type === 'change_theme') { changeTheme(data.theme, false); }
+            else if (data.type === 'change_status') { partnerStatusEl.textContent = `Партнер: ${data.status}`; }
         };
+        document.querySelectorAll('.mode-btn:not(.special)').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const activeBtn = document.querySelector('.mode-btn.active');
+                if (activeBtn) activeBtn.classList.remove('active');
+                btn.classList.add('active'); currentMode = btn.dataset.mode;
+            });
+        });
 
-        function sendNetData(obj) {
-            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
-        }
+        function sendNetData(obj) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
     </script>
 </body>
-    </html>
+</html>
