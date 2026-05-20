@@ -1,11 +1,11 @@
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
 
-// Хранилище активных комнат
 const rooms = {}; 
 
 wss.on('connection', (ws) => {
     let currentRoom = null;
+    let userUuid = null; // Понадобится, чтобы отличать, чьё именно это настроение
 
     ws.on('message', (message) => {
         const data = JSON.parse(message);
@@ -13,56 +13,72 @@ wss.on('connection', (ws) => {
         // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         if (data.type === 'join') {
             currentRoom = data.room;
+            userUuid = data.userId || Math.random().toString(36).substring(7); // ID пользователя
             
             if (!rooms[currentRoom]) {
                 rooms[currentRoom] = {
                     users: [],
-                    capsules: [] // <-- ТЕПЕРЬ КОМНАТА УМЕЕТ ЗАПОМИНАТЬ КАПСУЛЫ
+                    capsules: [],
+                    moods: {} // <-- ТЕПЕРЬ СЕРВЕР ЗАПОМИНАЕТ НАСТРОЕНИЯ ХРАНИЛИЩЕМ { "userId": "happy" }
                 };
             }
             
-            // Добавляем юзера, если его там еще нет
             if (!rooms[currentRoom].users.includes(ws)) {
                 rooms[currentRoom].users.push(ws);
             }
 
-            // Отправляем текущий статус комнат всем в ней
             broadcast(currentRoom, {
                 type: 'system_status',
                 text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
             });
 
-            // ВАЖНО: При входе высылаем юзеру ВСЕ накопленные капсулы этой комнаты
+            // Высылаем зашедшему юзеру все капсулы
             rooms[currentRoom].capsules.forEach(capsule => {
                 ws.send(JSON.stringify({ type: 'create_capsule', capsule }));
             });
+
+            // ВАЖНО: Высылаем актуальные настроения всех, кто уже есть в комнате
+            ws.send(JSON.stringify({
+                type: 'mood_sync',
+                moods: rooms[currentRoom].moods
+            }));
         }
 
-        // 2. СОЗДАНИЕ КАПСУЛЫ
+        // 2. ОБНОВЛЕНИЕ НАСТРОЕНИЯ
+        else if (data.type === 'mood_update') {
+            if (currentRoom && rooms[currentRoom]) {
+                // Запоминаем настроение конкретного пользователя на сервере
+                rooms[currentRoom].moods[data.userId] = data.mood;
+
+                // Пересылаем статус ВСЕМ в комнате (включая отправителя, если нужно для UI)
+                // Если на клиенте UI обновляется сам при клике, оставь тут `, ws` в конце broadcast
+                broadcast(currentRoom, {
+                    type: 'mood_update',
+                    userId: data.userId,
+                    mood: data.mood
+                }, ws);
+            }
+        }
+
+        // 3. СОЗДАНИЕ КАПСУЛЫ
         else if (data.type === 'create_capsule') {
             if (currentRoom && rooms[currentRoom]) {
-                // Сохраняем капсулу в память комнаты на сервере
                 rooms[currentRoom].capsules.push(data.capsule);
-                
-                // Пересылаем её партнёру (если он онлайн)
                 broadcast(currentRoom, data, ws); 
             }
         }
 
-        // 3. ЧТЕНИЕ/УДАЛЕНИЕ КАПСУЛЫ
+        // 4. ЧТЕНИЕ/УДАЛЕНИЕ КАПСУЛЫ
         else if (data.type === 'capsule_read') {
             if (currentRoom && rooms[currentRoom]) {
-                // Удаляем капсулу из памяти сервера по координатам
                 rooms[currentRoom].capsules = rooms[currentRoom].capsules.filter(c => 
                     !(c.x === data.x && c.y === data.y)
                 );
-                
-                // Синхронизируем удаление у партнёра
                 broadcast(currentRoom, data, ws);
             }
         }
 
-        // 4. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, темы)
+        // 5. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения)
         else {
             if (currentRoom) {
                 broadcast(currentRoom, data, ws);
@@ -79,7 +95,7 @@ wss.on('connection', (ws) => {
                 text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
             });
 
-            // Если комната совсем опустела и капсул нет — удаляем её структуру из ОЗУ
+            // Если комната пуста — очищаем память
             if (rooms[currentRoom].users.length === 0 && rooms[currentRoom].capsules.length === 0) {
                 delete rooms[currentRoom];
             }
@@ -87,11 +103,9 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Функция отправки сообщений внутри комнаты
 function broadcast(roomName, data, senderWs = null) {
     if (!rooms[roomName]) return;
     rooms[roomName].users.forEach(client => {
-        // Если senderWs передан, отправляем всем кроме автора, если не передан — вообще всем
         if (client.readyState === WebSocket.OPEN && client !== senderWs) {
             client.send(JSON.stringify(data));
         }
