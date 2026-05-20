@@ -1,6 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws';
 
-// Вместо const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
 const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
 
 // Хранилище активных комнат
@@ -8,12 +7,10 @@ const rooms = {};
 
 wss.on('connection', (ws) => {
     let currentRoom = null;
-    let userUuid = null; // Понадобится, чтобы отличать, чьё именно это настроение
 
     ws.on('message', (message) => {
         const data = JSON.parse(message);
 
-        // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         if (data.type === 'join') {
             currentRoom = data.room;
@@ -22,7 +19,7 @@ wss.on('connection', (ws) => {
                 rooms[currentRoom] = {
                     users: [],
                     capsules: [],
-                    moods: {} // <-- Хранилище настроений внутри конкретной комнаты
+                    moods: {} // Хранилище настроений внутри конкретной комнаты
                 };
             }
             
@@ -35,18 +32,19 @@ wss.on('connection', (ws) => {
                 text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
             });
 
+            // При входе отправляем юзеру все капсулы комнаты
             rooms[currentRoom].capsules.forEach(capsule => {
                 ws.send(JSON.stringify({ type: 'create_capsule', capsule }));
             });
 
-            // Отправляем вошедшему текущие статусы настроений в комнате
+            // Отправляем текущие статусы настроений в комнате
             ws.send(JSON.stringify({
                 type: 'mood_sync',
                 moods: rooms[currentRoom].moods
             }));
         }
 
-        // ОБРАБОТКА СТАТУСА НАСТРОЕНИЯ
+        // 2. ОБРАБОТКА СТАТУСА НАСТРОЕНИЯ
         else if (data.type === 'sync_mood_status') {
             if (currentRoom && rooms[currentRoom]) {
                 // Сохраняем настроение пользователя в объект комнаты
@@ -54,34 +52,6 @@ wss.on('connection', (ws) => {
                 
                 // Транслируем изменение партнёру (исключая отправителя через ws)
                 broadcast(currentRoom, data, ws);
-            }
-        }
-
-            // Высылаем зашедшему юзеру все капсулы
-            rooms[currentRoom].capsules.forEach(capsule => {
-                ws.send(JSON.stringify({ type: 'create_capsule', capsule }));
-            });
-
-            // ВАЖНО: Высылаем актуальные настроения всех, кто уже есть в комнате
-            ws.send(JSON.stringify({
-                type: 'mood_sync',
-                moods: rooms[currentRoom].moods
-            }));
-        }
-
-        // 2. ОБНОВЛЕНИЕ НАСТРОЕНИЯ
-        else if (data.type === 'mood_update') {
-            if (currentRoom && rooms[currentRoom]) {
-                // Запоминаем настроение конкретного пользователя на сервере
-                rooms[currentRoom].moods[data.userId] = data.mood;
-
-                // Пересылаем статус ВСЕМ в комнате (включая отправителя, если нужно для UI)
-                // Если на клиенте UI обновляется сам при клике, оставь тут `, ws` в конце broadcast
-                broadcast(currentRoom, {
-                    type: 'mood_update',
-                    userId: data.userId,
-                    mood: data.mood
-                }, ws);
             }
         }
 
