@@ -14,15 +14,15 @@ wss.on('connection', (ws) => {
         const data = JSON.parse(message);
 
         // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
+        // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         if (data.type === 'join') {
             currentRoom = data.room;
-            userUuid = data.userId || Math.random().toString(36).substring(7); // ID пользователя
             
             if (!rooms[currentRoom]) {
                 rooms[currentRoom] = {
                     users: [],
                     capsules: [],
-                    moods: {} // <-- ТЕПЕРЬ СЕРВЕР ЗАПОМИНАЕТ НАСТРОЕНИЯ ХРАНИЛИЩЕМ { "userId": "happy" }
+                    moods: {} // <-- Хранилище настроений внутри конкретной комнаты
                 };
             }
             
@@ -34,6 +34,28 @@ wss.on('connection', (ws) => {
                 type: 'system_status',
                 text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
             });
+
+            rooms[currentRoom].capsules.forEach(capsule => {
+                ws.send(JSON.stringify({ type: 'create_capsule', capsule }));
+            });
+
+            // Отправляем вошедшему текущие статусы настроений в комнате
+            ws.send(JSON.stringify({
+                type: 'mood_sync',
+                moods: rooms[currentRoom].moods
+            }));
+        }
+
+        // ОБРАБОТКА СТАТУСА НАСТРОЕНИЯ
+        else if (data.type === 'sync_mood_status') {
+            if (currentRoom && rooms[currentRoom]) {
+                // Сохраняем настроение пользователя в объект комнаты
+                rooms[currentRoom].moods[data.userId] = data.status;
+                
+                // Транслируем изменение партнёру (исключая отправителя через ws)
+                broadcast(currentRoom, data, ws);
+            }
+        }
 
             // Высылаем зашедшему юзеру все капсулы
             rooms[currentRoom].capsules.forEach(capsule => {
