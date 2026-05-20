@@ -564,28 +564,37 @@
             }
         }
 
-        function executeAction(x, y, isPartner = false, modeToUse = null) {
-            let activeMode = modeToUse || currentMode;
-            if (activeMode === 'tap') {
-                createParticlesEffect(x, y, 'tap');
-                if (!isPartner) {
-                    triggerHaptic('medium');
-                    sendNetData({ type: 'touch', pattern: 'tap', x: x, y: y });
-                }
-            } else if (activeMode === 'heartbeat') {
-                createParticlesEffect(x, y, 'heartbeat');
-                if (!isPartner) {
-                    triggerHaptic('heavy');
-                    sendNetData({ type: 'touch', pattern: 'heartbeat', x: x, y: y });
-                }
-            } else if (activeMode === 'kiss') {
-                createParticlesEffect(x, y, 'kiss');
-                if (!isPartner) {
-                    triggerHaptic('rigid');
-                    sendNetData({ type: 'touch', pattern: 'kiss', x: x, y: y });
-                }
-            }
+function executeAction(x, y, isPartner = false, modeToUse = null) {
+    let activeMode = modeToUse || currentMode;
+    
+    if (activeMode === 'tap') {
+        createParticlesEffect(x, y, 'tap');
+        if (!isPartner) {
+            triggerHaptic('medium');
+            sendNetData({ type: 'touch', pattern: 'tap', x: x, y: y });
         }
+    } else if (activeMode === 'heartbeat') {
+        createParticlesEffect(x, y, 'heartbeat');
+        if (!isPartner) {
+            triggerHaptic('heavy');
+            sendNetData({ type: 'touch', pattern: 'heartbeat', x: x, y: y });
+        }
+    } else if (activeMode === 'kiss') {
+        createParticlesEffect(x, y, 'kiss');
+        if (!isPartner) {
+            triggerHaptic('rigid');
+            sendNetData({ type: 'touch', pattern: 'kiss', x: x, y: y });
+        }
+    } 
+    // ✨ ДОБАВЛЕННЫЙ БЛОК ДЛЯ СИНХРОНИЗАЦИИ РИСОВАНИЯ:
+    else if (activeMode === 'draw') {
+        createParticlesEffect(x, y, 'draw');
+        // Если это рисует партнёр, можно добавить лёгкое вибро, чтобы телефон «зудел» при рисовании
+        if (isPartner) {
+            triggerHaptic('light'); 
+        }
+    }
+}
 
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
