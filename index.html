@@ -87,7 +87,60 @@
         .theme-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 1px solid #fff; }
 
         /* Экран авторизации */
-        #pairing-screen { position: fixed; inset: 0; background: #0b0b0e; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
+        /* ================= ИСПРАВЛЕННЫЙ ЭКРАН СОПРЯЖЕНИЯ ================= */
+        #pairing-screen {
+            position: fixed; 
+            inset: 0; 
+            background: #0b0b0e; 
+            z-index: 99999;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 15px; 
+            padding: 20px;
+        }
+        #pairing-screen h2 {
+            margin: 0; 
+            font-weight: 800; 
+            letter-spacing: 1px;
+            color: #fff;
+        }
+        #pairing-screen p {
+            color: #555566; 
+            font-size: 0.85rem; 
+            margin: 0 0 10px 0;
+        }
+        /* Стили инпута на входе (не зависят от переменных темы) */
+        #pairing-screen .input-field {
+            width: 100%; 
+            max-width: 280px; 
+            background: #15151f; 
+            border: 1px solid #2d2d3f; 
+            padding: 14px;
+            border-radius: 14px; 
+            color: #fff; 
+            text-align: center; 
+            font-size: 1.1rem; 
+            outline: none;
+        }
+        #pairing-screen .input-field::placeholder {
+            color: #444455;
+        }
+        /* Стили кнопки на входе */
+        #pairing-screen .primary-btn {
+            width: 100%; 
+            max-width: 280px; 
+            background: linear-gradient(135deg, #ff3366, #ff5588); 
+            border: none; 
+            padding: 14px;
+            border-radius: 14px; 
+            color: #fff; 
+            font-weight: bold; 
+            font-size: 1rem; 
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 51, 102, 0.3);
+        }
     </style>
 </head>
 <body class="theme-dark">
