@@ -24,7 +24,7 @@
 
         /* Экран сопряжения */
         #pairing-screen {
-            position: fixed; inset: 0; background: #0b0b0e; z-index: 9999;
+            position: fixed; inset: 0; background: #0b0b0e; z-index: 99999;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px;
         }
         .input-field {
@@ -56,7 +56,7 @@
         /* Кнопка "Поймай комбо" */
         #combo-trigger-btn {
             position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 10; background: #ff3366; border: none; padding: 10px 20px;
+            z-index: 100; background: #ff3366; border: none; padding: 10px 20px;
             border-radius: 20px; font-weight: bold; font-size: 0.85rem; color: white;
             box-shadow: 0 0 15px rgba(255, 51, 102, 0.5); display: none; animation: pulse 1.5s infinite;
         }
@@ -68,14 +68,16 @@
         .mode-btn.active { background: #ff3366; color: #fff; border-color: #ff3366; font-weight: bold; }
         .mode-btn.special { background: #7209b7; color: #fff; border-color: #7209b7; }
 
-        /* Всплывающее оверлей-уведомление */
+        /* [ФИКС СЛОЕВ]: Всплывающее уведомление НАД холстом (z-index: 9999) */
         #touch-overlay {
-            position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
             background: rgba(15, 15, 25, 0.95); border: 2px solid #ff3366; padding: 15px 25px;
-            border-radius: 20px; font-size: 1.2rem; font-weight: bold; text-align: center;
-            z-index: 999; pointer-events: none; opacity: 0; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 20px; font-size: 1.3rem; font-weight: bold; text-align: center;
+            z-index: 9999; pointer-events: none; opacity: 0; box-shadow: 0 10px 30px rgba(255, 51, 102, 0.4);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #touch-overlay.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
         /* Панель для записи ритма */
         #rhythm-overlay {
             position: fixed; inset: 0; background: rgba(11, 11, 14, 0.95);
@@ -88,17 +90,21 @@
             box-shadow: 0 0 30px rgba(114, 9, 183, 0.6);
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; font-size: 1.1rem; color: #fff;
-            border: 3px solid #ff3366; animation: pulse 1.5s infinite;
+            border: 3px solid #ff3366;
         }
     </style>
 </head>
 <body>
+
+    <div id="touch-overlay"></div>
+
     <div id="rhythm-overlay">
         <div class="rhythm-pad">СТУЧИ СЮДА</div>
-        <p style="color: #888; font-size: 0.9rem; text-align: center; padding: 0 20px;">
-            Держи кнопку «Запись Ритма» внизу и отстукивай таккт здесь!
+        <p style="color: #888; font-size: 0.9rem; text-align: center; padding: 0 20px; max-width: 280px;">
+            Удерживай кнопку ритма внизу и отстукивай такт на этом фиолетовом круге!
         </p>
     </div>
+
     <div id="pairing-screen">
         <h2 style="margin: 0; font-weight: 800; letter-spacing: 1px;">Прикосновения 2.0 💫</h2>
         <p style="color: #555566; font-size: 0.85rem; margin: 0 0 10px 0;">Создайте или введите код комнаты</p>
@@ -115,7 +121,6 @@
     </header>
 
     <div class="interactive-zone" id="zone">
-        <div id="touch-overlay"></div>
         <button id="combo-trigger-btn">ПОЙМАТЬ КАСАНИЕ 🤝</button>
         <canvas id="touch-canvas"></canvas>
     </div>
@@ -147,25 +152,28 @@
         const comboBtn = document.getElementById('combo-trigger-btn');
         const touchOverlay = document.getElementById('touch-overlay');
         const rhythmBtn = document.getElementById('rhythm-btn');
+        const rhythmOverlay = document.getElementById('rhythm-overlay');
+        const rhythmPad = document.querySelector('.rhythm-pad');
 
-        let currentMode = 'tap'; // Режимы: tap, heartbeat, hug, kiss, draw
+        let currentMode = 'tap';
         let isDrawing = false;
         let comboActiveByPartner = false;
         let comboTimeout = null;
 
-        // Переменные для кастомного ритма
         let isRecordingRhythm = false;
         let rhythmStartTime = 0;
         let recordedTaps = [];
 
-        // Тексты оверлеев
+        // Тексты для всплывающих надписей
         const overlayTexts = {
-            tap: "Тык! ⚡", heartbeat: "Стук сердца... ❤️",
-            hug: "Вас нежно обняли! 🫂", kiss: "Сладкий поцелуй! 💋",
-            combo: "ИДЕАЛЬНОЕ СОВПАДЕНИЕ! 💚🌟", custom: "Вам прислали личный ритм! 🥁"
+            tap: "Тык! ⚡", 
+            heartbeat: "Тук-тук... Стук сердца ❤️",
+            hug: "Вас крепко обняли! 🫂", 
+            kiss: "Сладкий поцелуй! 💋",
+            combo: "ИДЕАЛЬНОЕ СОВПАДЕНИЕ! 💚🌟", 
+            custom: "Вам прислали личный ритм! 🥁"
         };
 
-        // Подгонка размера холста
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
@@ -173,7 +181,6 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Логика авторизации
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
             ws.onopen = () => { startApp(roomInput.value.trim()); };
@@ -195,7 +202,6 @@
             resizeCanvas();
         }
 
-        // Переключение кнопок режимов
         document.querySelectorAll('.mode-btn:not(.special)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const activeBtn = document.querySelector('.mode-btn.active');
@@ -206,20 +212,23 @@
             });
         });
 
-        // ================= НАВИГАЦИЯ ВИБРАЦИЙ ДЛЯ IPHONE =================
+        // ================= ЭКСТРЕМАЛЬНАЯ ВИБРАЦИЯ ДЛЯ IPHONE =================
         function triggerHaptic(mode) {
             if (!tg || !tg.HapticFeedback) return;
             try {
                 if (mode === 'tap') {
                     tg.HapticFeedback.impactOccurred('heavy');
-                } else if (mode === 'heartbeat') {
+                    tg.HapticFeedback.impactOccurred('rigid');
                     tg.HapticFeedback.impactOccurred('heavy');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy'); }, 140);
+                } else if (mode === 'heartbeat') {
+                    tg.HapticFeedback.notificationOccurred('warning');
+                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning'); }, 180);
                 } else if (mode === 'hug') {
                     tg.HapticFeedback.notificationOccurred('success');
+                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error'); }, 100);
                 } else if (mode === 'kiss') {
-                    tg.HapticFeedback.notificationOccurred('warning');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy'); }, 220);
+                    tg.HapticFeedback.impactOccurred('heavy');
+                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 80);
                 } else if (mode === 'combo') {
                     tg.HapticFeedback.notificationOccurred('success');
                     setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 200);
@@ -229,7 +238,6 @@
             } catch(e) {}
         }
 
-        // Воспроизведение кастомного записанного ритма
         function playCustomRhythm(taps) {
             if (taps.length === 0) return;
             showOverlay('custom');
@@ -241,14 +249,15 @@
             });
         }
 
-        // Показ всплывающего текста
+        // Показ всплывающего текста по центру экрана
         function showOverlay(type) {
-            touchOverlay.textContent = overlayTexts[type] || "Прикосновение! 💫";
-            touchOverlay.classList.add('show');
-            setTimeout(() => touchOverlay.classList.remove('show'), 1500);
+            if (overlayTexts[type]) {
+                touchOverlay.textContent = overlayTexts[type];
+                touchOverlay.classList.add('show');
+                setTimeout(() => touchOverlay.classList.remove('show'), 1400);
+            }
         }
 
-        // Рисование кругов-вспышек на холсте
         function drawCircle(x, y, color) {
             ctx.beginPath();
             ctx.arc(x, y, 35, 0, Math.PI * 2);
@@ -256,14 +265,10 @@
             ctx.globalAlpha = 0.6;
             ctx.fill();
             ctx.globalAlpha = 1.0;
-            
-            // Плавное угасание вспышки
-            setTimeout(() => {
-                ctx.clearRect(x - 50, y - 50, 100, 100);
-            }, 400);
+            setTimeout(() => { ctx.clearRect(x - 50, y - 50, 100, 100); }, 400);
         }
 
-        // ================= ОБРАБОТКА ХОЛСТА (РИСОВАНИЕ И ТАПЫ) =================
+        // ================= ОБРАБОТКА НАЖАТИЙ НА ЭКРАН =================
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -275,11 +280,8 @@
                 ctx.beginPath(); ctx.moveTo(x, y);
                 ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 4; ctx.lineCap = 'round';
             } else {
-                // Стандартный одиночный или комбо-режим
                 sendNetData({ type: 'touch', pattern: currentMode, x, y });
                 drawCircle(x, y, '#00b4d8');
-                
-                // Активируем комбо-окно на стороне отправителя на 1.5 секунды
                 sendNetData({ type: 'combo_window_open' });
             }
         });
@@ -303,7 +305,6 @@
             }
         });
 
-        // Механика КУРСОР/ОТВЕТА НА КОМБО
         comboBtn.addEventListener('click', () => {
             if (comboActiveByPartner) {
                 sendNetData({ type: 'combo_match_success' });
@@ -320,58 +321,37 @@
             setTimeout(() => document.body.classList.remove('combo-active'), 1500);
         }
 
-        // ================= ИДЕЯ 4: РЕЖИМ ЗАПИСИ СВОЕГО РИТМА =================
+        // ================= ИСПРАВЛЕННАЯ ЗАПИСЬ РИТМА =================
         rhythmBtn.addEventListener('pointerdown', (e) => {
-        // Элемент окна записи
-        const rhythmOverlay = document.getElementById('rhythm-overlay');
-        const rhythmPad = document.querySelector('.rhythm-pad');
-
-        // Включение режима записи при зажатии кнопки
-        rhythmBtn.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            e.stopPropagation(); // Блокируем утечку клика на холст
-            
+            e.preventDefault(); e.stopPropagation();
             isRecordingRhythm = true;
             rhythmStartTime = Date.now();
             recordedTaps = [];
-            
             rhythmBtn.textContent = "🔴 Запись идёт...";
-            rhythmOverlay.style.display = 'flex'; // Показываем окно для стука
-            
+            rhythmOverlay.style.display = 'flex';
             if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         });
 
-        // Отстукивание ритма строго внутри пэда
         rhythmPad.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
+            e.preventDefault(); e.stopPropagation();
             if (!isRecordingRhythm) return;
-            
             const offset = Date.now() - rhythmStartTime;
             recordedTaps.push(offset);
-            
-            // Даем визуальный отклик на пэде
-            drawCircle(canvas.width / 2, canvas.height / 2, '#7209b7');
-            triggerHaptic('tap'); // Вибрируем при записи, чтобы чувствовать темп
+            triggerHaptic('tap');
         });
 
-        // Завершение записи, когда отпускаешь кнопку внизу
         rhythmBtn.addEventListener('pointerup', (e) => {
             e.preventDefault();
             if (!isRecordingRhythm) return;
-            
             isRecordingRhythm = false;
             rhythmBtn.textContent = "Запись Ритма 🥁";
-            rhythmOverlay.style.style.display = 'none'; // Прячем окно
-            
+            rhythmOverlay.style.display = 'none';
             if (recordedTaps.length > 0) {
                 sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
                 if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             }
         });
 
-        // Подстраховка: если палец соскользнул с кнопки наружу экрана
         rhythmBtn.addEventListener('pointerleave', (e) => {
             if (isRecordingRhythm) {
                 isRecordingRhythm = false;
@@ -383,15 +363,7 @@
             }
         });
 
-        // Если идет запись, перехватываем клики по экрану в массив
-        window.addEventListener('pointerdown', (e) => {
-            if (!isRecordingRhythm) return;
-            const offset = Date.now() - rhythmStartTime;
-            recordedTaps.push(offset);
-            triggerHaptic('tap');
-        });
-
-        // ================= СЕТЕВАЯ РАБОТА И ПРИЕМ ДАННЫХ =================
+        // ================= ПРИЕМ ДАННЫХ ИЗ СЕТИ =================
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
@@ -402,17 +374,15 @@
                     badge.classList.remove('online'); statusText.textContent = 'Поиск...';
                 }
             } 
-            // Получение стандартного прикосновения
             else if (data.type === 'touch') {
                 triggerHaptic(data.pattern);
-                showOverlay(data.pattern);
+                showOverlay(data.pattern); // [РАБОТАЕТ!]: Всплывающая надпись на событие партнера
                 drawCircle(data.x || canvas.width/2, data.y || canvas.height/2, '#ff4d6d');
                 
                 const className = "touch-" + data.pattern;
                 document.body.classList.add(className);
                 setTimeout(() => document.body.classList.remove(className), 500);
             }
-            // Рисование в реальном времени от лица партнера
             else if (data.type === 'draw_start') {
                 ctx.beginPath(); ctx.moveTo(data.x, data.y);
                 ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 4; ctx.lineCap = 'round';
@@ -420,10 +390,8 @@
                 ctx.lineTo(data.x, data.y); ctx.stroke();
                 triggerHaptic('draw_vibe');
             } else if (data.type === 'draw_end') {
-                // Мягко стираем холст партнера через секунду после завершения линии
                 setTimeout(() => ctx.clearRect(0,0,canvas.width,canvas.height), 1000);
             }
-            // Окно для Комбо-Клика
             else if (data.type === 'combo_window_open') {
                 comboActiveByPartner = true;
                 comboBtn.style.display = 'block';
@@ -431,11 +399,10 @@
                 comboTimeout = setTimeout(() => {
                     comboBtn.style.display = 'none';
                     comboActiveByPartner = false;
-                }, 1500); // Окно держится 1.5 секунды
+                }, 1500);
             } else if (data.type === 'combo_match_success') {
                 handleComboSuccess();
             }
-            // Получение кастомного ритма
             else if (data.type === 'custom_rhythm') {
                 playCustomRhythm(data.taps);
             }
@@ -446,4 +413,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
