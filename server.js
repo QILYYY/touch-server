@@ -1,80 +1,99 @@
 const WebSocket = require('ws');
-const http = require('http');
+const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Touch Server 2026 is Running\n');
-});
-
-const wss = new WebSocket.Server({ server });
-const rooms = {}; // Хранилище комнат и пользователей
+// Хранилище активных комнат
+const rooms = {}; 
 
 wss.on('connection', (ws) => {
     let currentRoom = null;
 
     ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
+        const data = JSON.parse(message);
 
-            // 1. Вход в комнату
-            if (data.type === 'join') {
-                currentRoom = data.room;
-                if (!rooms[currentRoom]) rooms[currentRoom] = [];
-                
-                // Ограничиваем комнату двумя участниками
-                if (rooms[currentRoom].length < 2) {
-                    rooms[currentRoom].push(ws);
-                }
-                
-                // Уведомляем участников о статусе сети
-                broadcastToRoom(currentRoom, { 
-                    type: 'system_status', 
-                    text: `Участников: ${rooms[currentRoom].length}` 
-                });
+        // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
+        if (data.type === 'join') {
+            currentRoom = data.room;
+            
+            if (!rooms[currentRoom]) {
+                rooms[currentRoom] = {
+                    users: [],
+                    capsules: [] // <-- ТЕПЕРЬ КОМНАТА УМЕЕТ ЗАПОМИНАТЬ КАПСУЛЫ
+                };
+            }
+            
+            // Добавляем юзера, если его там еще нет
+            if (!rooms[currentRoom].users.includes(ws)) {
+                rooms[currentRoom].users.push(ws);
             }
 
-            // 2. Ретрансляция ВСЕХ типов событий партнеру
-            // (подходит для touch, draw_start, draw_move, draw_end, custom_rhythm, combo_match)
+            // Отправляем текущий статус комнат всем в ней
+            broadcast(currentRoom, {
+                type: 'system_status',
+                text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
+            });
+
+            // ВАЖНО: При входе высылаем юзеру ВСЕ накопленные капсулы этой комнаты
+            rooms[currentRoom].capsules.forEach(capsule => {
+                ws.send(JSON.stringify({ type: 'create_capsule', capsule }));
+            });
+        }
+
+        // 2. СОЗДАНИЕ КАПСУЛЫ
+        else if (data.type === 'create_capsule') {
             if (currentRoom && rooms[currentRoom]) {
-                rooms[currentRoom].forEach((client) => {
-                    if (client !== ws && client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify(data));
-                    }
-                });
+                // Сохраняем капсулу в память комнаты на сервере
+                rooms[currentRoom].capsules.push(data.capsule);
+                
+                // Пересылаем её партнёру (если он онлайн)
+                broadcast(currentRoom, data, ws); 
             }
+        }
 
-        } catch (e) {
-            console.error("Ошибка обработки:", e);
+        // 3. ЧТЕНИЕ/УДАЛЕНИЕ КАПСУЛЫ
+        else if (data.type === 'capsule_read') {
+            if (currentRoom && rooms[currentRoom]) {
+                // Удаляем капсулу из памяти сервера по координатам
+                rooms[currentRoom].capsules = rooms[currentRoom].capsules.filter(c => 
+                    !(c.x === data.x && c.y === data.y)
+                );
+                
+                // Синхронизируем удаление у партнёра
+                broadcast(currentRoom, data, ws);
+            }
+        }
+
+        // 4. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, темы)
+        else {
+            if (currentRoom) {
+                broadcast(currentRoom, data, ws);
+            }
         }
     });
 
     ws.on('close', () => {
         if (currentRoom && rooms[currentRoom]) {
-            rooms[currentRoom] = rooms[currentRoom].filter((client) => client !== ws);
-            broadcastToRoom(currentRoom, { 
-                type: 'system_status', 
-                text: `Участников: ${rooms[currentRoom].length}` 
+            rooms[currentRoom].users = rooms[currentRoom].users.filter(u => u !== ws);
+            
+            broadcast(currentRoom, {
+                type: 'system_status',
+                text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
             });
-            if (rooms[currentRoom].length === 0) delete rooms[currentRoom];
+
+            // Если комната совсем опустела и капсул нет — удаляем её структуру из ОЗУ
+            if (rooms[currentRoom].users.length === 0 && rooms[currentRoom].capsules.length === 0) {
+                delete rooms[currentRoom];
+            }
         }
     });
 });
 
-function broadcastToRoom(room, data) {
-    if (rooms[room]) {
-        rooms[room].forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
-            }
-        });
-    }
+// Функция отправки сообщений внутри комнаты
+function broadcast(roomName, data, senderWs = null) {
+    if (!rooms[roomName]) return;
+    rooms[roomName].users.forEach(client => {
+        // Если senderWs передан, отправляем всем кроме автора, если не передан — вообще всем
+        if (client.readyState === WebSocket.OPEN && client !== senderWs) {
+            client.send(JSON.stringify(data));
+        }
+    });
 }
-
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));                });
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    });
-});
