@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Прикосновения Ультра 7.1 ♾️</title>
+    <title>Прикосновения Ультра 7.3 ♾️</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-      * { 
+        /* Полная блокировка любого выделения, копирования и системных жестов */
+        * { 
             box-sizing: border-box; 
             font-family: 'Segoe UI', -apple-system, sans-serif; 
             
-            /* Отключаем выделение текста */
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
             
-            /* Отключаем синий или серый квадрат-подсветку при нажатии на iOS/Android */
             -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none; /* Отключаем системное меню при долгом нажатии на iOS */
+            -webkit-touch-callout: none;
         }
         
         body {
@@ -39,8 +38,9 @@
             100% { box-shadow: inset 0 0 50px var(--border); }
         }
 
-        body.lock-active { background: #100511 !important; animation: lockGlow 2s infinite alternate; }
-        @keyframes lockGlow { 0% { box-shadow: inset 0 0 40px rgba(114,9,183,0.2); } 100% { box-shadow: inset 0 0 70px rgba(255,51,102,0.4); } }
+        /* Эффект объятий на весь экран */
+        body.lock-active { background: #120416 !important; animation: lockGlow 1.5s infinite alternate; }
+        @keyframes lockGlow { 0% { box-shadow: inset 0 0 50px rgba(181,23,158,0.25); } 100% { box-shadow: inset 0 0 90px rgba(255,51,102,0.5); } }
 
         header { display: flex; justify-content: space-between; align-items: center; padding: 5px 5px 12px 5px; z-index: 10; }
         .status-badge {
@@ -57,6 +57,7 @@
             background: var(--panel-bg); border: 1px solid var(--border);
             color: #aaa; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px;
             cursor: pointer; backdrop-filter: blur(8px); transition: all 0.2s;
+            outline: none;
         }
 
         /* Интерактивный холст */
@@ -96,6 +97,7 @@
             flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
             background: none; border: none; color: #777; font-size: 0.75rem; font-weight: 500;
             cursor: pointer; padding: 8px 4px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
         }
         .mode-btn .icon { font-size: 1.35rem; transition: transform 0.2s; }
         .mode-btn.active { color: #fff; background: rgba(255, 255, 255, 0.05); font-weight: bold; }
@@ -119,8 +121,9 @@
         .capsule-input {
             width: 100%; background: #181824; border: 1px solid #2d2d3f; padding: 14px;
             border-radius: 16px; color: #fff; font-size: 0.95rem; outline: none; resize: none; height: 90px;
+            -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
-        .capsule-btn { background: #ff758f; border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: bold; cursor: pointer; }
+        .capsule-btn { background: #ff758f; border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: bold; cursor: pointer; outline: none; }
 
         /* Стеклянное меню настроек */
         #native-menu-overlay {
@@ -142,17 +145,20 @@
         .status-bubble.active { border-color: var(--accent); background: rgba(255,51,102,0.08); color: #fff; font-weight: bold; }
         
         .emoji-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; }
-        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; }
+        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; outline: none; }
         
         .theme-selector { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 16px; justify-content: center; }
         .theme-opt { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #aaa; cursor: pointer; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 12px; border: 1px solid transparent; }
         .theme-opt.active { border-color: var(--accent); color: var(--accent); font-weight: bold; }
-        .close-menu-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 14px; border-radius: 16px; font-weight: bold; cursor: pointer; text-align: center; }
+        .close-menu-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 14px; border-radius: 16px; font-weight: bold; cursor: pointer; text-align: center; outline: none; }
 
         #pairing-screen { position: fixed; inset: 0; background: #07070a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
         #pairing-screen h2 { margin: 0; font-weight: 800; color: #fff; }
-        #pairing-screen .input-field { width: 100%; max-width: 280px; background: #111116; border: 1px solid #1f1f29; padding: 15px; border-radius: 16px; color: #fff; text-align: center; outline: none; }
-        #pairing-screen .primary-btn { width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 15px; border-radius: 16px; color: #fff; font-weight: bold; cursor: pointer; }
+        #pairing-screen .input-field { 
+            width: 100%; max-width: 280px; background: #111116; border: 1px solid #1f1f29; padding: 15px; border-radius: 16px; color: #fff; text-align: center; outline: none;
+            -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
+        }
+        #pairing-screen .primary-btn { width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 15px; border-radius: 16px; color: #fff; font-weight: bold; cursor: pointer; outline: none; }
     </style>
 </head>
 <body class="theme-dark">
@@ -163,12 +169,12 @@
             <p style="color: #666; font-size: 0.75rem; margin: 0; text-align: center;">Оно застынет в выбранном месте, пока партнёр не откроет его.</p>
             <textarea id="capsule-text" class="capsule-input" placeholder="Напиши что-то нежное..."></textarea>
             <button id="save-capsule-btn" class="capsule-btn">Сохранить прикосновение</button>
-            <button id="close-capsule-btn" style="background:none; border:none; color:#555; cursor:pointer; font-size:0.8rem;">Отмена</button>
+            <button id="close-capsule-btn" style="background:none; border:none; color:#555; cursor:pointer; font-size:0.8rem; outline: none;">Отмена</button>
         </div>
     </div>
 
     <div id="pairing-screen">
-        <h2>Прикосновения Ультра 7.1 ♾️</h2>
+        <h2>Прикосновения Ультра 7.3 ♾️</h2>
         <p style="color: #444455; font-size: 0.85rem; margin: 0;">Вместе сквозь расстояние</p>
         <input type="text" id="room-input" class="input-field" placeholder="Код вашей комнаты">
         <button id="connect-btn" class="primary-btn">Войти в пространство</button>
@@ -185,7 +191,6 @@
 
     <div class="interactive-zone" id="zone">
         <div id="capsule-hint-banner">✉️ Нажми на холст, чтобы выбрать место</div>
-        
         <div id="emoji-anim-overlay">❤️</div>
         <canvas id="touch-canvas"></canvas>
     </div>
@@ -216,7 +221,7 @@
 
             <div class="menu-section">
                 <div class="menu-section-title">Оставить Капсулу Времени</div>
-                <button class="status-bubble" id="menu-capsule-btn" style="flex: none; width: 100%; background: rgba(255, 117, 143, 0.1); border-color: rgba(255, 117, 143, 0.3); padding: 12px; font-weight: 600; color: #ff758f;">✉️ Оставить послание на холсте</button>
+                <button class="status-bubble" id="menu-capsule-btn" style="flex: none; width: 100%; background: rgba(255, 117, 143, 0.1); border-color: rgba(255, 117, 143, 0.3); padding: 12px; font-weight: 600; color: #ff758f; outline: none;">✉️ Оставить послание на холсте</button>
             </div>
 
             <div class="menu-section">
@@ -253,6 +258,8 @@
     </div>
 
     <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
         const tg = window.Telegram.WebApp;
         if (tg) { tg.expand(); tg.ready(); }
 
@@ -272,7 +279,6 @@
         const partnerModeIndicator = document.getElementById('partner-mode-indicator');
         const emojiOverlay = document.getElementById('emoji-anim-overlay');
         
-        // Капсулы
         const capsuleModal = document.getElementById('capsule-modal');
         const capsuleText = document.getElementById('capsule-text');
         const saveCapsuleBtn = document.getElementById('save-capsule-btn');
@@ -286,14 +292,13 @@
 
         let myPointer = { x: 0, y: 0, active: false };
         let partnerPointer = { x: 0, y: 0, active: false, intensity: 0 };
-        let pointerMoved = false;
         let heartbeatInterval = null;
         let lockInterval = null;
         let isLockActive = false;
 
         let timeCapsules = []; 
         let pendingCapsuleCoords = { x: 0, y: 0 };
-        let isSelectingCapsuleLocation = false; // Флаг ожидания тапа по холсту
+        let isSelectingCapsuleLocation = false;
 
         const fluidColors = {
             tap: "rgba(0, 180, 216, 0.08)", heartbeat: "rgba(255, 77, 109, 0.08)",
@@ -303,7 +308,17 @@
 
         const modeIndicatorColors = { tap: '#00b4d8', heartbeat: '#ff3366', kiss: '#ff758f', draw: '#b5179e' };
 
-        // Док переключения режимов
+        // Функция обертка для безопасной нативной вибрации
+        function triggerHaptic(type) {
+            if (tg && tg.HapticFeedback) {
+                if (type === 'light' || type === 'medium' || type === 'heavy' || type === 'soft' || type === 'rigid') {
+                    tg.HapticFeedback.impactOccurred(type);
+                } else if (type === 'success' || type === 'warning' || type === 'error') {
+                    tg.HapticFeedback.notificationOccurred(type);
+                }
+            }
+        }
+
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -311,17 +326,19 @@
                 currentMode = btn.dataset.mode;
                 triggerFluidBackground(currentMode);
                 sendNetData({ type: 'mode_change_sync', mode: currentMode });
-                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                triggerHaptic('light');
             });
         });
 
         openMenuBtn.addEventListener('click', () => {
             menuOverlay.style.display = 'flex';
             setTimeout(() => menuOverlay.classList.add('open'), 10);
+            triggerHaptic('light');
         });
         closeMenuBtn.addEventListener('click', () => {
             menuOverlay.classList.remove('open');
             setTimeout(() => menuOverlay.style.display = 'none', 300);
+            triggerHaptic('light');
         });
 
         function resizeCanvas() {
@@ -336,7 +353,7 @@
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
             ws.onopen = () => startApp(roomInput.value.trim());
         } else {
-            const savedRoom = localStorage.getItem('tg_room_code_v7.1');
+            const savedRoom = localStorage.getItem('tg_room_code_v7.3');
             if (savedRoom) roomInput.value = savedRoom;
         }
 
@@ -347,19 +364,17 @@
         });
 
         function startApp(roomCode) {
-            localStorage.setItem('tg_room_code_v7.1', roomCode);
+            localStorage.setItem('tg_room_code_v7.3', roomCode);
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'join', room: roomCode }));
             pairingScreen.style.display = 'none';
             resizeCanvas();
         }
 
-        // ИСПРАВЛЕННОЕ ИЗМЕНЕНИЕ ДИЗАЙНА (ТЕМА)
         function changeTheme(themeName, sendNet = false) {
             document.body.className = document.body.classList.contains('couple-breathing') ? 'couple-breathing' : '';
             if (isLockActive) document.body.classList.add('lock-active');
             document.body.classList.add('theme-' + themeName);
 
-            // Переключаем активную плашку в меню дизайна
             document.querySelectorAll('.theme-opt').forEach(opt => opt.classList.remove('active'));
             const activeOpt = document.getElementById('th-' + themeName);
             if (activeOpt) activeOpt.classList.add('active');
@@ -392,7 +407,8 @@
                 else if (this.type === 'heartbeat') { this.size = Math.random() * 5 + 4; this.speedX = (Math.random() - 0.5) * 1.2; this.speedY = (Math.random() - 0.5) * 1.2; this.decay = 0.012; this.color = '#ff3366'; } 
                 else if (this.type === 'kiss') { this.size = Math.random() * 6 + 8; this.speedX = (Math.random() - 0.5) * 4; this.speedY = (Math.random() - 0.4) * 5 - 1; this.decay = 0.012; this.color = '#ff758f'; } 
                 else if (this.type === 'draw') { this.size = Math.random() * 4 + 4; this.speedX = (Math.random() - 0.5) * 0.8; this.speedY = (Math.random() - 0.5) * 0.8; this.decay = 0.03; this.color = '#b5179e'; }
-                else if (this.type === 'lock_fire') { this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 3; this.speedY = (Math.random() - 0.5) * 3; this.decay = 0.015; this.color = Math.random() > 0.5 ? '#7209b7' : '#ff3366'; }
+                else if (this.type === 'lock_fire') { this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 4; this.speedY = (Math.random() - 0.5) * 4; this.decay = 0.02; this.color = Math.random() > 0.5 ? '#b5179e' : '#ff3366'; }
+                else if (this.type === 'catch_sparks') { this.size = Math.random() * 3 + 4; this.speedX = (Math.random() - 0.5) * 8; this.speedY = (Math.random() - 0.5) * 8; this.decay = 0.015; this.color = '#00f0ff'; }
                 else if (this.type === 'emoji') { this.size = Math.random() * 12 + 14; this.speedX = (Math.random() - 0.5) * 6; this.speedY = (Math.random() - 0.5) * 6; this.decay = 0.012; }
             }
             update() { this.x += this.speedX; this.y += this.speedY; this.alpha -= this.decay; if (this.type === 'heartbeat') this.size += 0.2; }
@@ -406,15 +422,14 @@
         }
 
         function createParticlesEffect(x, y, type, char = '') {
-            let count = type === 'draw' ? 2 : (type === 'lock_fire' ? 4 : 12);
+            let count = type === 'draw' ? 2 : (type === 'lock_fire' ? 6 : (type === 'catch_sparks' ? 20 : 12));
             for (let i = 0; i < count; i++) { particles.push(new Particle(x, y, type, char)); }
         }
 
-        // РЕНДЕР ЦИКЛ
         function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Отрисовка Капсул Времени
+            // Капсулы времени
             timeCapsules.forEach(capsule => {
                 ctx.save();
                 let pulseSize = 14 + Math.sin(Date.now() * 0.003) * 4;
@@ -428,82 +443,118 @@
                 ctx.restore();
             });
 
-            // 2. Аура партнера
+            // МИНИИГРА: Аура партнера (цель для ловли касаний)
             if (partnerPointer.active && partnerPointer.intensity > 0) {
                 ctx.save();
                 let radius = isLockActive ? 120 : 75;
                 let gradient = ctx.createRadialGradient(partnerPointer.x, partnerPointer.y, 2, partnerPointer.x, partnerPointer.y, radius * partnerPointer.intensity);
                 let partnerColor = modeIndicatorColors[partnerPointer.currentMode || 'tap'] || '#ff3366';
-                gradient.addColorStop(0, partnerColor + '40');
+                
+                // Эффект свечения миниигры
+                gradient.addColorStop(0, partnerColor + '55');
+                gradient.addColorStop(0.4, partnerColor + '20');
                 gradient.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = gradient;
-                ctx.beginPath(); ctx.arc(partnerPointer.x, partnerPointer.y, radius + 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(partnerPointer.x, partnerPointer.y, radius + 25, 0, Math.PI * 2); ctx.fill();
+                
+                // Тонкий прицельный кружок, если касание свежее
+                if (partnerPointer.intensity > 0.4 && !isLockActive) {
+                    ctx.strokeStyle = partnerColor + '44';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath(); ctx.arc(partnerPointer.x, partnerPointer.y, 35 * partnerPointer.intensity, 0, Math.PI * 2); ctx.stroke();
+                }
                 ctx.restore();
-                if (!isLockActive) { partnerPointer.intensity -= 0.004; if (partnerPointer.intensity <= 0) partnerPointer.active = false; }
+
+                // Постепенное угасание следа партнера
+                if (!isLockActive) { 
+                    partnerPointer.intensity -= 0.006; 
+                    if (partnerPointer.intensity <= 0) partnerPointer.active = false; 
+                }
             }
 
-            // 3. Частицы
             particles = particles.filter(p => p.alpha > 0);
             particles.forEach(p => { p.update(); p.draw(); });
             requestAnimationFrame(renderLoop);
         }
         requestAnimationFrame(renderLoop);
 
+        // МИНИИГРА ОБЪЯТИЯ (Проверка совпадения координат)
         function checkThermalLock() {
-            if (myPointer.active && partnerPointer.active) {
+            if (myPointer.active && partnerPointer.active && partnerPointer.intensity > 0.1) {
                 let distance = Math.sqrt(Math.pow(myPointer.x - partnerPointer.x, 2) + Math.pow(myPointer.y - partnerPointer.y, 2));
+                
+                // Если пальцы соприкоснулись — активируются ОБЪЯТИЯ
                 if (distance < 42) {
                     if (!isLockActive) {
                         isLockActive = true;
                         document.body.classList.add('lock-active');
                         triggerFluidBackground('lock');
+                        
                         lockInterval = setInterval(() => {
                             createParticlesEffect((myPointer.x + partnerPointer.x)/2, (myPointer.y + partnerPointer.y)/2, 'lock_fire');
-                            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft');
-                            comboScore++; updateScoreUI();
-                        }, 250);
+                            triggerHaptic('soft'); // Мягкий непрерывный вибро-пульс контакта
+                            comboScore++; 
+                            updateScoreUI();
+                        }, 200); // Чуть ускорили тик для динамики
                     }
                     return;
                 }
             }
-            if (isLockActive) { isLockActive = false; document.body.classList.remove('lock-active'); triggerFluidBackground(currentMode); clearInterval(lockInterval); }
+            // Разрыв объятий
+            if (isLockActive) { 
+                isLockActive = false; 
+                document.body.classList.remove('lock-active'); 
+                triggerFluidBackground(currentMode); 
+                clearInterval(lockInterval); 
+            }
         }
 
-        // ================= ОБРАБОТКА ХОЛСТА (ПОЛНОСТЬЮ ПЕРЕПИСАНА ПОД ВЫБОР МЕСТА) =================
+        // ================= ОБРАБОТКА ХОЛСТА =================
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             let clickedX = e.clientX - rect.left;
             let clickedY = e.clientY - rect.top;
 
-            // ЕСЛИ МЫ В РЕЖИМЕ ВЫБОРА МЕСТА ДЛЯ КАПСУЛЫ
             if (isSelectingCapsuleLocation) {
                 pendingCapsuleCoords = { x: clickedX, y: clickedY };
                 isSelectingCapsuleLocation = false;
-                capsuleBanner.classList.remove('show'); // Прячем баннер выбора места
+                capsuleBanner.classList.remove('show');
                 
-                // Теперь открываем модалку для ввода текста
                 capsuleText.value = '';
                 capsuleModal.style.display = 'flex';
                 capsuleText.focus();
-                return; // Прерываем обычные действия, чтобы не спавнить искры
+                return;
             }
 
             myPointer.x = clickedX; myPointer.y = clickedY;
             myPointer.active = true;
-            pointerMoved = false;
 
-            // Проверка открытия существующей капсулы
+            // 1. Проверка клика по капсуле времени
             let clickedCapsuleIndex = timeCapsules.findIndex(c => {
                 return Math.sqrt(Math.pow(c.x - myPointer.x, 2) + Math.pow(c.y - myPointer.y, 2)) < 25;
             });
 
             if (clickedCapsuleIndex !== -1) {
                 let cap = timeCapsules[clickedCapsuleIndex];
-                if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                triggerHaptic('success');
                 alert(`Капсула времени: \n\n"${cap.text}"`);
                 timeCapsules.splice(clickedCapsuleIndex, 1);
                 sendNetData({ type: 'capsule_read', x: cap.x, y: cap.y });
                 myPointer.active = false; return;
+            }
+
+            // 2. МИНИИГРА: Проверка ловли касания партнера
+            if (partnerPointer.active && partnerPointer.intensity > 0.1 && !isLockActive) {
+                let distToPartner = Math.sqrt(Math.pow(myPointer.x - partnerPointer.x, 2) + Math.pow(myPointer.y - partnerPointer.y, 2));
+                // Если попали в зону чужой ауры (ловкость рук)
+                if (distToPartner < 45) {
+                    comboScore += 5; // Даем жирный бонус к комбо
+                    updateScoreUI();
+                    createParticlesEffect(partnerPointer.x, partnerPointer.y, 'catch_sparks');
+                    triggerHaptic('success'); // Накатывает сочный победный виброотклик
+                    sendNetData({ type: 'touch', pattern: 'lock_fire', x: partnerPointer.x, y: partnerPointer.y });
+                }
             }
 
             executeAction(myPointer.x, myPointer.y);
@@ -517,7 +568,6 @@
             if (!myPointer.active || isSelectingCapsuleLocation) return;
             const rect = canvas.getBoundingClientRect();
             myPointer.x = e.clientX - rect.left; myPointer.y = e.clientY - rect.top;
-            pointerMoved = true;
 
             sendNetData({ type: 'partner_move_sync', x: myPointer.x, y: myPointer.y, active: true, mode: currentMode });
             checkThermalLock();
@@ -540,43 +590,38 @@
             sendNetData({ type: 'touch', pattern: currentMode, x, y });
             createParticlesEffect(x, y, currentMode);
             triggerFluidBackground(currentMode);
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(currentMode === 'kiss' ? 'heavy' : 'medium');
+            
+            // Дифференцированная тактильная отдача в зависимости от режима
+            if (currentMode === 'tap') triggerHaptic('light');
+            else if (currentMode === 'kiss') triggerHaptic('heavy');
+            else if (currentMode === 'heartbeat') triggerHaptic('medium');
         }
 
-        // ================= НОВАЯ ЛОГИКА АКТИВАЦИИ КАПСУЛЫ ИЗ МЕНЮ =================
         menuCapsuleBtn.addEventListener('click', () => {
-            // Закрываем меню настроек
             menuOverlay.classList.remove('open'); 
             setTimeout(() => { menuOverlay.style.display = 'none'; }, 300);
-
-            // Переводим приложение в режим ожидания клика по холсту
             isSelectingCapsuleLocation = true;
-            capsuleBanner.classList.add('show'); // Показываем плашку «Нажми на холст»
+            capsuleBanner.classList.add('show');
+            triggerHaptic('light');
         });
 
         saveCapsuleBtn.addEventListener('click', () => {
             let text = capsuleText.value.trim();
             if (!text) return alert('Введите текст сообщения!');
-            
             let newCapsule = { x: pendingCapsuleCoords.x, y: pendingCapsuleCoords.y, text: text };
-            
-            // Отправляем в сокет
             sendNetData({ type: 'create_capsule', capsule: newCapsule });
-            
-            // Кладём локально в массив, чтобы видеть её на своём холсте до прочтения партнёром
             timeCapsules.push(newCapsule);
-            
             capsuleModal.style.display = 'none';
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            triggerHaptic('success');
         });
 
         closeCapsuleBtn.addEventListener('click', () => {
             capsuleModal.style.display = 'none';
             isSelectingCapsuleLocation = false;
             capsuleBanner.classList.remove('show');
+            triggerHaptic('light');
         });
 
-        // Смайлы и статусы
         function playEmojiAnimation(emoji) {
             emojiOverlay.textContent = emoji; emojiOverlay.classList.add('pop');
             setTimeout(() => { createParticlesEffect(canvas.width / 2, canvas.height / 2, 'emoji', emoji); }, 120);
@@ -584,14 +629,20 @@
         }
 
         document.querySelectorAll('.emoji-btn').forEach(btn => {
-            btn.addEventListener('click', () => { sendNetData({ type: 'send_emoji', emoji: btn.dataset.emoji }); playEmojiAnimation(btn.dataset.emoji); });
+            btn.addEventListener('click', () => { 
+                sendNetData({ type: 'send_emoji', emoji: btn.dataset.emoji }); 
+                playEmojiAnimation(btn.dataset.emoji); 
+                triggerHaptic('medium');
+            });
         });
 
         document.querySelectorAll('.status-bubble').forEach(el => {
             el.addEventListener('click', () => {
-                if(el.id === 'menu-capsule-btn') return; // Игнорируем кнопку капсулы
+                if(el.id === 'menu-capsule-btn') return;
                 document.querySelectorAll('.status-bubble').forEach(b => { if(b.id !== 'menu-capsule-btn') b.classList.remove('active'); });
-                el.classList.add('active'); sendNetData({ type: 'change_status', status: el.dataset.status });
+                el.classList.add('active'); 
+                sendNetData({ type: 'change_status', status: el.dataset.status });
+                triggerHaptic('light');
             });
         });
 
@@ -605,7 +656,7 @@
             } 
             else if (data.type === 'partner_move_sync') {
                 partnerPointer.x = data.x; partnerPointer.y = data.y; partnerPointer.active = data.active; partnerPointer.currentMode = data.mode;
-                if (data.active) partnerPointer.intensity = 1.0;
+                if (data.active) partnerPointer.intensity = 1.0; // Сбрасываем силу свечения на максимум при движении
                 checkThermalLock();
             }
             else if (data.type === 'mode_change_sync') {
@@ -617,18 +668,17 @@
                 if (isLockActive) return;
                 triggerFluidBackground(data.pattern);
                 createParticlesEffect(data.x || canvas.width/2, data.y || canvas.height/2, data.pattern);
-                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(data.pattern === 'kiss' ? 'heavy' : 'medium');
+                
+                // Тонкий вибро-клик при получении чужого касания на своем девайсе
+                if (data.pattern === 'kiss') triggerHaptic('heavy');
+                else if (data.pattern === 'heartbeat') triggerHaptic('medium');
+                else if (data.pattern === 'lock_fire') createParticlesEffect(data.x, data.y, 'catch_sparks'); // Взрыв пойманого тапа у партнера
+                else triggerHaptic('light');
             }
             else if (data.type === 'draw_move') { createParticlesEffect(data.x, data.y, 'draw'); }
-            else if (data.type === 'send_emoji') { playEmojiAnimation(data.emoji); }
-            else if (data.type === 'create_capsule') {
-                // Пришла капсула от партнера — добавляем в рендер
-                timeCapsules.push(data.capsule);
-            }
-            else if (data.type === 'capsule_read') {
-                // Партнер прочитал какую-то капсулу — удаляем её со своего экрана
-                timeCapsules = timeCapsules.filter(c => !(c.x === data.x && c.y === data.y));
-            }
+            else if (data.type === 'send_emoji') { playEmojiAnimation(data.emoji); triggerHaptic('medium'); }
+            else if (data.type === 'create_capsule') { timeCapsules.push(data.capsule); triggerHaptic('warning'); }
+            else if (data.type === 'capsule_read') { timeCapsules = timeCapsules.filter(c => !(c.x === data.x && c.y === data.y)); }
             else if (data.type === 'change_theme') { changeTheme(data.theme, false); }
             else if (data.type === 'change_status') { partnerStatusEl.textContent = data.status; }
         };
