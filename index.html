@@ -3,126 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Прикосновения Ультра 4.0 💫</title>
+    <title>Прикосновения Ультра 5.0 ✨</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, sans-serif; user-select: none; }
         
         body {
-            margin: 0; padding: 10px; height: 100vh;
+            margin: 0; padding: 15px; height: 100vh;
             color: #fff; display: flex; flex-direction: column; justify-content: space-between;
-            overflow: hidden; transition: background-color 0.3s, color 0.3s;
+            overflow: hidden; transition: background 0.8s ease, color 0.5s;
         }
 
-        /* Цветовые схемы (Темы) */
-        body.theme-dark { background-color: #0b0b0e; --panel-bg: #15151f; --accent: #ff3366; --border: #232336; }
-        body.theme-cyber { background-color: #050515; --panel-bg: #0b0b26; --accent: #00f0ff; --border: #00ff66; }
-        body.theme-pastel { background-color: #1a1525; --panel-bg: #2d223c; --accent: #ff758f; --border: #7209b7; }
+        /* Плавные, глубокие темы */
+        body.theme-dark { background: #07070a; --panel-bg: rgba(21, 21, 31, 0.6); --accent: #ff3366; --border: rgba(35, 35, 54, 0.4); }
+        body.theme-cyber { background: #02020b; --panel-bg: rgba(11, 11, 38, 0.6); --accent: #00f0ff; --border: rgba(0, 240, 255, 0.2); }
+        body.theme-pastel { background: #0f0b16; --panel-bg: rgba(45, 34, 60, 0.6); --accent: #ff758f; --border: rgba(114, 9, 183, 0.3); }
 
-        /* Вспышки фонов */
-        body.touch-tap { background-color: rgba(0, 180, 216, 0.2) !important; }
-        body.touch-heartbeat { background-color: rgba(255, 77, 109, 0.2) !important; }
-        body.touch-hug { background-color: rgba(114, 9, 183, 0.2) !important; }
-        body.touch-kiss { background-color: rgba(255, 117, 143, 0.2) !important; }
-        body.combo-active { background-color: rgba(56, 176, 0, 0.3) !important; }
+        /* Эффект синхронного дыхания, когда пара в сети */
+        body.couple-breathing {
+            animation: breath 6s ease-in-out infinite alternate;
+        }
+        @keyframes breath {
+            0% { box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.01); }
+            100% { box-shadow: inset 0 0 50px var(--border); }
+        }
 
-        /* Шапка */
-        header { display: flex; justify-content: space-between; align-items: center; padding: 5px 5px 8px 5px; border-bottom: 1px solid var(--border); }
+        /* Минималистичный интерактивный хэдер */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 5px 5px 12px 5px; }
         .status-badge {
-            display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem;
-            background: var(--panel-bg); padding: 4px 12px; border-radius: 20px; color: #888;
+            display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem;
+            background: var(--panel-bg); padding: 6px 14px; border-radius: 20px; color: #666;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border); transition: all 0.5s;
         }
-        .status-badge.online { color: #4caf50; background: rgba(76, 175, 80, 0.1); }
-        .status-badge .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; }
-        .status-badge.online .dot { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+        .status-badge.online { color: #4caf50; background: rgba(76, 175, 80, 0.06); border-color: rgba(76, 175, 80, 0.2); }
+        .status-badge .dot { width: 6px; height: 6px; background: #444; border-radius: 50%; transition: all 0.5s; }
+        .status-badge.online .dot { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
 
         .menu-toggle-btn {
             background: var(--panel-bg); border: 1px solid var(--border);
-            color: #fff; font-size: 1.1rem; padding: 6px 12px; border-radius: 14px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+            color: #aaa; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px;
+            cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.2s;
         }
-        .menu-toggle-btn:active { transform: scale(0.92); border-color: var(--accent); }
+        .menu-toggle-btn:active { transform: scale(0.95); color: #fff; border-color: var(--accent); }
 
-        /* Игровая зона */
+        /* Живой холст без грубых рамок */
         .interactive-zone {
-            position: relative; flex-grow: 1; margin: 10px 0;
-            background: linear-gradient(145deg, rgba(20,20,30,0.4), rgba(10,10,15,0.4));
-            border: 2px dashed var(--border); border-radius: 24px; overflow: hidden;
+            position: relative; flex-grow: 1; margin: 5px 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.01), transparent);
+            border-radius: 32px; overflow: hidden;
+            transition: background 0.6s ease;
         }
         #touch-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; }
         
         #combo-trigger-btn {
-            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: var(--accent); border: none; padding: 10px 20px;
-            border-radius: 20px; font-weight: bold; font-size: 0.85rem; color: white;
-            box-shadow: 0 0 15px var(--accent); display: none; animation: pulse 1.2s infinite;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 100; background: var(--accent); border: none; padding: 12px 24px;
+            border-radius: 24px; font-weight: bold; font-size: 0.85rem; color: white;
+            box-shadow: 0 0 20px var(--accent); display: none; animation: pulse 1.2s infinite;
         }
-        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); } }
+        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } 100% { transform: translateX(-50%) scale(1); } }
 
-        /* Анимация оверлея эмодзи */
+        /* Вылет смайликов */
         #emoji-anim-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            font-size: 6rem; z-index: 999; pointer-events: none; opacity: 0;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+            font-size: 6.5rem; z-index: 999; pointer-events: none; opacity: 0;
+            transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.45);
         }
-        #emoji-anim-overlay.pop { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(10deg); }
+        #emoji-anim-overlay.pop { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(8deg); }
 
-        /* Кнопки режимов */
-        .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 4px; }
-        .mode-btn { background: var(--panel-bg); border: 1px solid var(--border); color: #a0a0b0; padding: 11px 4px; border-radius: 12px; cursor: pointer; font-size: 0.75rem; }
-        .mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: bold; }
-        .mode-btn.special { background: #7209b7; color: #fff; border-color: #7209b7; }
+        /* Подсказка жестов снизу экрана вместо кнопок */
+        .gesture-hint {
+            text-align: center; font-size: 0.75rem; color: #444455; padding: 10px 0 5px 0;
+            letter-spacing: 0.3px; pointer-events: none; transition: color 0.3s;
+        }
 
         #touch-overlay {
-            position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            background: rgba(15, 15, 25, 0.95); border: 2px solid var(--accent); padding: 12px 22px;
-            border-radius: 20px; font-size: 1.1rem; font-weight: bold; text-align: center;
-            z-index: 9999; pointer-events: none; opacity: 0; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: fixed; top: 18%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+            background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border); padding: 10px 20px; border-radius: 20px; 
+            font-size: 0.95rem; font-weight: 500; text-align: center; color: #fff;
+            z-index: 9999; pointer-events: none; opacity: 0; transition: all 0.25s ease;
         }
         #touch-overlay.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
         #rhythm-overlay {
-            position: fixed; inset: 0; background: rgba(11, 11, 14, 0.95);
-            z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+            position: fixed; inset: 0; background: rgba(5, 5, 8, 0.96); backdrop-filter: blur(15px);
+            z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 25px;
         }
-        .rhythm-pad { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #7209b7, #3f076b); display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid var(--accent); }
+        .rhythm-pad { width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, #7209b7, #240046); display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid var(--accent); box-shadow: 0 0 30px rgba(114,9,183,0.3); }
 
-        /* ВСПЛЫВАЮЩЕЕ МЕНЮ */
+        /* СТЕКЛЯННОЕ ВСПЛЫВАЮЩЕЕ МЕНЮ (Glassmorphism) */
         #native-menu-overlay {
-            position: fixed; inset: 0; background: rgba(5, 5, 8, 0.85);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            position: fixed; inset: 0; background: rgba(3, 3, 5, 0.6);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 50000; display: none; align-items: flex-end; justify-content: center;
         }
         .menu-sheet {
-            width: 100%; max-width: 450px; background: #12121a; border-top: 2px solid var(--border);
-            border-radius: 24px 24px 0 0; padding: 24px; display: flex; flex-direction: column; gap: 20px;
-            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 100%; max-width: 450px; background: rgba(18, 18, 26, 0.85); border-top: 1px solid rgba(255,255,255,0.06);
+            border-radius: 30px 30px 0 0; padding: 26px; display: flex; flex-direction: column; gap: 22px;
+            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
         }
         #native-menu-overlay.open .menu-sheet { transform: translateY(0); }
         
-        .menu-section { display: flex; flex-direction: column; gap: 8px; }
-        .menu-section-title { font-size: 0.85rem; color: #666677; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .menu-section { display: flex; flex-direction: column; gap: 10px; }
+        .menu-section-title { font-size: 0.75rem; color: #555566; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; }
         
-        .score-box { background: rgba(255,255,255,0.03); border: 1px dashed var(--border); padding: 14px; border-radius: 16px; text-align: center; font-weight: bold; color: var(--accent); font-size: 1.05rem; }
+        .score-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); padding: 14px; border-radius: 18px; text-align: center; font-weight: 600; color: var(--accent); font-size: 1rem; }
         .status-bar { display: flex; gap: 8px; justify-content: space-between; }
-        .status-bubble { flex: 1; background: #1a1a26; border: 1px solid #2a2a3a; padding: 10px 5px; text-align: center; border-radius: 12px; font-size: 0.8rem; cursor: pointer; }
-        .status-bubble.active { border-color: var(--accent); background: rgba(255,51,102,0.1); font-weight: bold; }
+        .status-bubble { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 11px 5px; text-align: center; border-radius: 14px; font-size: 0.8rem; color: #ccc; cursor: pointer; transition: all 0.2s; }
+        .status-bubble.active { border-color: var(--accent); background: rgba(255,51,102,0.08); color: #fff; font-weight: bold; }
         
-        .emoji-bar { display: flex; justify-content: space-around; background: #1a1a26; padding: 10px; border-radius: 14px; gap: 5px; }
-        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; transition: transform 0.1s; }
-        .emoji-btn:active { transform: scale(1.25); }
+        .emoji-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; gap: 5px; }
+        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; transition: transform 0.15s; }
+        .emoji-btn:active { transform: scale(1.3); }
 
-        .theme-selector { display: flex; gap: 12px; background: #1a1a26; padding: 12px; border-radius: 14px; justify-content: center; }
-        .theme-opt { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; background: #12121a; padding: 6px 12px; border-radius: 10px; border: 1px solid #2d2d3f; }
-        .theme-opt.active { border-color: var(--accent); color: var(--accent); font-weight: bold; }
+        .theme-selector { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 16px; justify-content: center; }
+        .theme-opt { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #aaa; cursor: pointer; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 12px; border: 1px solid transparent; transition: all 0.2s; }
+        .theme-opt.active { border-color: var(--accent); color: var(--accent); font-weight: bold; background: rgba(0,0,0,0.4); }
         
-        .close-menu-btn { background: var(--accent); border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; text-align: center; }
+        .close-menu-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 14px; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; text-align: center; transition: background 0.2s; }
+        .close-menu-btn:active { background: rgba(255,255,255,0.1); }
 
         /* Экран авторизации */
-        #pairing-screen { position: fixed; inset: 0; background: #0b0b0e; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
-        #pairing-screen h2 { margin: 0; font-weight: 800; color: #fff; }
-        #pairing-screen .input-field { width: 100%; max-width: 280px; background: #15151f; border: 1px solid #2d2d3f; padding: 14px; border-radius: 14px; color: #fff; text-align: center; font-size: 1.1rem; outline: none; }
-        #pairing-screen .primary-btn { width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 14px; border-radius: 14px; color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(255, 51, 102, 0.3); }
+        #pairing-screen { position: fixed; inset: 0; background: #07070a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
+        #pairing-screen h2 { margin: 0; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+        #pairing-screen .input-field { width: 100%; max-width: 280px; background: #111116; border: 1px solid #1f1f29; padding: 15px; border-radius: 16px; color: #fff; text-align: center; font-size: 1.05rem; outline: none; }
+        #pairing-screen .primary-btn { width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 15px; border-radius: 16px; color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 5px 20px rgba(255, 51, 102, 0.25); }
     </style>
 </head>
 <body class="theme-dark">
@@ -131,22 +139,22 @@
 
     <div id="rhythm-overlay">
         <div class="rhythm-pad">СТУЧИ СЮДА</div>
-        <p style="color: #888; font-size: 0.85rem; text-align: center; max-width: 250px;">Отстукивай ритм пальцем по кругу!</p>
+        <p style="color: #666; font-size: 0.85rem; text-align: center; max-width: 250px;">Отстукивай ритм пальцем по кругу!</p>
     </div>
 
     <div id="pairing-screen">
         <h2>Прикосновения Ультра 💫</h2>
-        <p style="color: #555566; font-size: 0.85rem; margin: 0;">Введите или создайте код комнаты</p>
-        <input type="text" id="room-input" class="input-field" placeholder="Код комнаты">
-        <button id="connect-btn" class="primary-btn">Войти в систему</button>
+        <p style="color: #444455; font-size: 0.85rem; margin: 0;">Вместе сквозь расстояние</p>
+        <input type="text" id="room-input" class="input-field" placeholder="Код вашей комнаты">
+        <button id="connect-btn" class="primary-btn">Войти в пространство</button>
     </div>
 
     <header>
         <div>
-            <div id="status-badge" class="status-badge"><div class="dot"></div> <span id="status-text">Поиск...</span></div>
-            <span id="partner-status" style="font-size: 0.75rem; color: #666; margin-left: 8px;">Партнер: --</span>
+            <div id="status-badge" class="status-badge"><div class="dot"></div> <span id="status-text">Поиск пары...</span></div>
+            <span id="partner-status" style="font-size: 0.75rem; color: #444455; margin-left: 8px; transition: color 0.5s;">🤍</span>
         </div>
-        <button class="menu-toggle-btn" id="open-menu-btn">⚙️ Меню</button>
+        <button class="menu-toggle-btn" id="open-menu-btn">Настройки</button>
     </header>
 
     <div class="interactive-zone" id="zone">
@@ -157,12 +165,12 @@
 
     <div id="native-menu-overlay">
         <div class="menu-sheet">
-            <h3 style="margin: 0; text-align: center; font-size: 1.1rem; letter-spacing: 0.5px;">Пространство Пары ✨</h3>
+            <h3 style="margin: 0; text-align: center; font-size: 1rem; font-weight: 600; letter-spacing: 0.3px; color: #eee;">Связь между вами ✨</h3>
             
             <div class="score-box" id="score-display">Уровень связи: 1 (0 Комбо) ❤️</div>
 
             <div class="menu-section">
-                <div class="menu-section-title">Отправить быструю реакцию</div>
+                <div class="menu-section-title">Быстрая эмоция</div>
                 <div class="emoji-bar">
                     <button class="emoji-btn" data-emoji="❤️">❤️</button>
                     <button class="emoji-btn" data-emoji="🔥">🔥</button>
@@ -174,7 +182,7 @@
             </div>
 
             <div class="menu-section">
-                <div class="menu-section-title">Моё состояние</div>
+                <div class="menu-section-title">Моё настроение</div>
                 <div class="status-bar">
                     <div class="status-bubble" data-status="⏳ Занят(а)">⏳ Занят</div>
                     <div class="status-bubble" data-status="💔 Скучаю">💔 Скучаю</div>
@@ -183,32 +191,32 @@
             </div>
 
             <div class="menu-section">
-                <div class="menu-section-title">Оформление комнат</div>
+                <div class="menu-section-title">Создать кастомную вибрацию</div>
+                <button class="status-bubble" id="rhythm-btn" style="flex: none; width: 100%; background: rgba(114, 9, 183, 0.1); border-color: rgba(114, 9, 183, 0.3); padding: 12px; font-weight: 600;">🥁 Нажать и записать личный ритм</button>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Сменить оформление</div>
                 <div class="theme-selector">
-                    <div class="theme-opt active" id="th-dark" onclick="changeTheme('dark', true)">🖤 Тёмная</div>
-                    <div class="theme-opt" id="th-cyber" onclick="changeTheme('cyber', true)">🧪 Киберпанк</div>
-                    <div class="theme-opt" id="th-pastel" onclick="changeTheme('pastel', true)">🌸 Пастель</div>
+                    <div class="theme-opt active" id="th-dark" onclick="changeTheme('dark', true)">🖤 Глубокая</div>
+                    <div class="theme-opt" id="th-cyber" onclick="changeTheme('cyber', true)">🧪 Неон</div>
+                    <div class="theme-opt" id="th-pastel" onclick="changeTheme('pastel', true)">🌸 Нежность</div>
                 </div>
             </div>
 
-            <button class="close-menu-btn" id="close-menu-btn">Закрыть</button>
+            <button class="close-menu-btn" id="close-menu-btn">Вернуться к холсту</button>
         </div>
     </div>
 
-    <div class="modes">
-        <button class="mode-btn active" data-mode="tap">Тап ⚡</button>
-        <button class="mode-btn" data-mode="heartbeat">Пульс ❤️</button>
-        <button class="mode-btn" data-mode="hug">Объятие 🫂</button>
-        <button class="mode-btn" data-mode="kiss">Поцелуй 💋</button>
-        <button class="mode-btn" data-mode="draw">Рисование 🎨</button>
-        <button class="mode-btn special" id="rhythm-btn">Запись Ритма 🥁</button>
+    <div class="gesture-hint" id="gesture-hint-el">
+        Тап — искра • Удержание — пульс • Дабл-тап — поцелуй • Свайп — рисовать
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         if (tg) { tg.expand(); tg.ready(); }
 
-        const ws = new WebSocket('wss://touch-server-emiy.onrender.com');
+        const ws = new WebSocket('wss://my-touch-app.onrender.com');
 
         const menuOverlay = document.getElementById('native-menu-overlay');
         const openMenuBtn = document.getElementById('open-menu-btn');
@@ -228,22 +236,39 @@
         const scoreDisplay = document.getElementById('score-display');
         const partnerStatusEl = document.getElementById('partner-status');
         const emojiOverlay = document.getElementById('emoji-anim-overlay');
+        const gestureHintEl = document.getElementById('gesture-hint-el');
 
-        let currentMode = 'tap';
-        let isDrawing = false;
+        // Глобальные переменные жестов и присутствия
+        let particles = [];
         let comboActiveByPartner = false;
         let comboTimeout = null;
-        let particles = [];
         let isRecordingRhythm = false;
         let rhythmStartTime = 0;
         let recordedTaps = [];
-
         let comboScore = parseInt(localStorage.getItem('touch_combo_score') || '0');
 
+        // Переменные локального трекинга пальцев
+        let pointerStartTime = 0;
+        let pointerMoved = false;
+        let lastTapTime = 0;
+        let heartbeatInterval = null;
+
+        // Координаты присутствия партнера (Аура)
+        let partnerPointer = { x: 0, y: 0, active: false, intensity: 0 };
+
         const overlayTexts = {
-            tap: "Тык! ⚡", heartbeat: "Стук сердца... ❤️",
-            hug: "Вас нежно обняли! 🫂", kiss: "Сладкий поцелуй! 💋",
-            combo: "ИДЕАЛЬНОЕ СОВПАДЕНИЕ! 💚🌟", custom: "Вам прислали личный ритм! 🥁"
+            tap: "Тык! ⚡", heartbeat: "Чувствую твой пульс... ❤️",
+            hug: "Нежные объятия... 🫂", kiss: "Сладкий поцелуй! 💋",
+            combo: "ПОЛНОЕ ЕДИНЕНИЕ КАСАНИЙ! 🌟💚", custom: "Тебе прислали личный ритм сердца 🥁"
+        };
+
+        // Жидкие фоновые цвета для переливов
+        const fluidColors = {
+            tap: "rgba(0, 180, 216, 0.12)",
+            heartbeat: "rgba(255, 77, 109, 0.12)",
+            kiss: "rgba(255, 117, 143, 0.15)",
+            draw: "rgba(114, 9, 183, 0.08)",
+            clear: "transparent"
         };
 
         openMenuBtn.addEventListener('click', () => {
@@ -272,7 +297,7 @@
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
             ws.onopen = () => startApp(roomInput.value.trim());
         } else {
-            const savedRoom = localStorage.getItem('tg_room_code_v3');
+            const savedRoom = localStorage.getItem('tg_room_code_v4');
             if (savedRoom) roomInput.value = savedRoom;
         }
 
@@ -283,14 +308,14 @@
         });
 
         function startApp(roomCode) {
-            localStorage.setItem('tg_room_code_v3', roomCode);
+            localStorage.setItem('tg_room_code_v4', roomCode);
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'join', room: roomCode }));
             pairingScreen.style.display = 'none';
             resizeCanvas();
         }
 
         function changeTheme(themeName, sendNet = false) {
-            document.body.className = '';
+            document.body.className = document.body.classList.contains('couple-breathing') ? 'couple-breathing' : '';
             document.body.classList.add('theme-' + themeName);
             document.querySelectorAll('.theme-opt').forEach(opt => opt.classList.remove('active'));
             const currentOpt = document.getElementById('th-' + themeName);
@@ -304,152 +329,222 @@
             localStorage.setItem('touch_combo_score', comboScore);
         }
 
-        // ================= УЛЬТИМАТИВНЫЙ ДВИЖОК КОМБИНИРОВАННЫХ ЧАСТИЦ =================
+        // Плавный перелив фона интерактивной зоны
+        function triggerFluidBackground(action) {
+            const zone = document.getElementById('zone');
+            zone.style.background = fluidColors[action] || fluidColors.clear;
+            if (action !== 'clear' && action !== 'draw' && action !== 'heartbeat') {
+                setTimeout(() => { zone.style.background = fluidColors.clear; }, 900);
+            }
+        }
+
+        // ================= ДВИЖОК ЖИВЫХ ЧАСТИЦ С ЭФФЕКТОМ АУРЫ =================
         class Particle {
             constructor(x, y, actionType, customChar = '') {
-                this.x = x;
-                this.y = y;
-                this.type = actionType; // 'tap', 'heartbeat', 'hug', 'kiss', 'draw', 'emoji', 'combo'
-                this.char = customChar;
-                this.alpha = 1;
-                this.rotation = Math.random() * Math.PI * 2;
-                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.x = x; this.y = y; this.type = actionType; this.char = customChar;
+                this.alpha = 1; this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.06;
 
-                // Настройки физики в зависимости от режима
                 if (this.type === 'tap') {
-                    this.size = Math.random() * 3 + 4;
-                    this.speedX = (Math.random() - 0.5) * 10; // Быстрый разлет
-                    this.speedY = (Math.random() - 0.5) * 10;
-                    this.decay = Math.random() * 0.03 + 0.02;
-                    this.color = Math.random() > 0.4 ? '#00b4d8' : '#ffb703'; // Синие и желтые искры
+                    this.size = Math.random() * 3 + 3;
+                    this.speedX = (Math.random() - 0.5) * 7;
+                    this.speedY = (Math.random() - 0.5) * 7;
+                    this.decay = Math.random() * 0.02 + 0.02;
+                    this.color = Math.random() > 0.4 ? '#00b4d8' : '#ffb703';
                 } 
                 else if (this.type === 'heartbeat') {
-                    this.size = Math.random() * 10 + 10; // Большие круги
-                    this.speedX = (Math.random() - 0.5) * 2; // Медленно расширяются
-                    this.speedY = (Math.random() - 0.5) * 2;
-                    this.decay = 0.015;
-                    this.color = `css_var`; // Берется из темы или красный
-                } 
-                else if (this.type === 'hug') {
-                    this.size = Math.random() * 6 + 8;
-                    this.speedX = (Math.random() - 0.5) * 3;
-                    this.speedY = (Math.random() - 0.5) * 3;
-                    this.decay = 0.01; // Долго угасают
-                    this.color = Math.random() > 0.5 ? '#7209b7' : '#b5179e'; // Фиолетово-розовые облака
+                    this.size = Math.random() * 6 + 4;
+                    this.speedX = (Math.random() - 0.5) * 1.5;
+                    this.speedY = (Math.random() - 0.5) * 1.5;
+                    this.decay = 0.012;
+                    this.color = '#ff3366';
                 } 
                 else if (this.type === 'kiss') {
-                    this.size = Math.random() * 8 + 10;
-                    this.speedX = (Math.random() - 0.5) * 5;
-                    this.speedY = (Math.random() - 0.3) * 6 - 2; // Летят немного вверх
-                    this.decay = 0.015;
+                    this.size = Math.random() * 6 + 8;
+                    this.speedX = (Math.random() - 0.5) * 4;
+                    this.speedY = (Math.random() - 0.4) * 5 - 1;
+                    this.decay = 0.012;
                     this.color = '#ff758f';
                 } 
                 else if (this.type === 'draw') {
-                    this.size = Math.random() * 5 + 6;
-                    this.speedX = (Math.random() - 0.5) * 2;
-                    this.speedY = (Math.random() - 0.5) * 2;
-                    this.decay = 0.03;
-                    // Радужные переливы для рисования
-                    const hues = [0, 45, 180, 280, 320];
-                    this.color = `hsl(${hues[Math.floor(Math.random() * hues.length)]}, 100%, 65%)`;
+                    this.size = Math.random() * 4 + 4;
+                    this.speedX = (Math.random() - 0.5) * 1;
+                    this.speedY = (Math.random() - 0.5) * 1;
+                    this.decay = 0.025;
+                    const hues = [190, 220, 290, 330];
+                    this.color = `hsl(${hues[Math.floor(Math.random() * hues.length)]}, 90%, 65%)`;
                 } 
                 else if (this.type === 'combo') {
-                    this.size = Math.random() * 6 + 6;
-                    this.speedX = (Math.random() - 0.5) * 12;
-                    this.speedY = (Math.random() - 0.5) * 12;
-                    this.decay = 0.01;
-                    this.color = '#38b000'; // Ярко-зеленый салют
-                }
-                else if (this.type === 'emoji') {
-                    this.size = Math.random() * 14 + 14;
+                    this.size = Math.random() * 5 + 5;
                     this.speedX = (Math.random() - 0.5) * 9;
                     this.speedY = (Math.random() - 0.5) * 9;
+                    this.decay = 0.008;
+                    this.color = '#38b000';
+                }
+                else if (this.type === 'emoji') {
+                    this.size = Math.random() * 12 + 14;
+                    this.speedX = (Math.random() - 0.5) * 7;
+                    this.speedY = (Math.random() - 0.5) * 7;
                     this.decay = 0.012;
                 }
             }
 
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                this.alpha -= this.decay;
-                this.rotation += this.rotationSpeed;
-                if (this.type === 'heartbeat') this.size += 0.4; // Эффект расширения волны пульса
+                this.x += this.speedX; this.y += this.speedY;
+                this.alpha -= this.decay; this.rotation += this.rotationSpeed;
+                if (this.type === 'heartbeat') this.size += 0.3; 
             }
 
             draw() {
-                ctx.save();
-                ctx.globalAlpha = this.alpha;
-                
+                ctx.save(); ctx.globalAlpha = this.alpha;
                 if (this.type === 'emoji') {
-                    ctx.font = `${this.size}px serif`;
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(this.rotation);
+                    ctx.font = `${this.size}px serif`; ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
                     ctx.fillText(this.char, -this.size/2, this.size/2);
                 } 
                 else if (this.type === 'kiss') {
-                    // Отрисовка маленьких сердечек для поцелуя
-                    ctx.fillStyle = this.color;
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(this.rotation * 0.2);
-                    ctx.beginPath();
-                    ctx.moveTo(0, 0);
+                    ctx.fillStyle = this.color; ctx.translate(this.x, this.y); ctx.rotate(this.rotation * 0.1);
+                    ctx.beginPath(); ctx.moveTo(0, 0);
                     ctx.bezierCurveTo(-this.size/2, -this.size/2, -this.size, this.size/3, 0, this.size);
-                    ctx.bezierCurveTo(this.size, this.size/3, this.size/2, -this.size/2, 0, 0);
-                    ctx.fill();
+                    ctx.bezierCurveTo(this.size, this.size/3, this.size/2, -this.size/2, 0, 0); ctx.fill();
                 }
                 else if (this.type === 'tap') {
-                    // Отрисовка искр ромбиками / молниями
-                    ctx.fillStyle = this.color;
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(this.rotation);
-                    ctx.beginPath();
-                    ctx.moveTo(0, -this.size);
-                    ctx.lineTo(this.size/2, 0);
-                    ctx.lineTo(0, this.size);
-                    ctx.lineTo(-this.size/2, 0);
-                    ctx.closePath();
-                    ctx.fill();
+                    ctx.fillStyle = this.color; ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
+                    ctx.beginPath(); ctx.moveTo(0, -this.size); ctx.lineTo(this.size/2, 0); ctx.lineTo(0, this.size); ctx.lineTo(-this.size/2, 0); ctx.closePath(); ctx.fill();
                 }
                 else {
-                    // Круги для пульса, объятий, комбо и рисования
-                    ctx.fillStyle = this.color === 'css_var' ? (getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#ff3366') : this.color;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
                 }
                 ctx.restore();
             }
         }
 
         function createParticlesEffect(x, y, type, char = '') {
-            let count = 15;
-            if (type === 'emoji') count = 25;
-            if (type === 'combo') count = 35;
-            if (type === 'draw') count = 2; // Меньше частиц, чтобы холст не забивался при движении
-            
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, type, char));
-            }
+            let count = type === 'draw' ? 2 : (type === 'emoji' ? 22 : (type === 'combo' ? 30 : 12));
+            for (let i = 0; i < count; i++) { particles.push(new Particle(x, y, type, char)); }
         }
 
-        function animateParticles() {
+        // Рендер цикл: Частицы + Тепловой след (Аура) партнера
+        function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка Ауры присутствия партнера
+            if (partnerPointer.active && partnerPointer.intensity > 0) {
+                ctx.save();
+                let activeAccent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#ff3366';
+                let gradient = ctx.createRadialGradient(
+                    partnerPointer.x, partnerPointer.y, 5, 
+                    partnerPointer.x, partnerPointer.y, 75 * partnerPointer.intensity
+                );
+                gradient.addColorStop(0, activeAccent.replace(')', ', 0.22)').replace('rgb', 'rgba'));
+                gradient.addColorStop(0.5, activeAccent.replace(')', ', 0.06)').replace('rgb', 'rgba'));
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(partnerPointer.x, partnerPointer.y, 100, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Медленно растворяем интенсивность ауры, если нет новых сигналов движения
+                partnerPointer.intensity -= 0.005;
+                if (partnerPointer.intensity <= 0) partnerPointer.active = false;
+            }
+
             particles = particles.filter(p => p.alpha > 0);
             particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(renderLoop);
         }
-        animateParticles();
+        requestAnimationFrame(renderLoop);
 
-        // ================= ЛОГИКА АНИМАЦИИ ЭМОДЗИ =================
+        // ================= ИНТУИТИВНОЕ УПРАВЛЕНИЕ ЖЕСТАМИ (БЕЗ КНОПОК) =================
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            
+            pointerStartTime = Date.now();
+            pointerMoved = false;
+
+            // Логика Двойного тапа (Поцелуй)
+            if (pointerStartTime - lastTapTime < 280) {
+                clearTimeout(heartbeatInterval);
+                sendNetData({ type: 'touch', pattern: 'kiss', x, y });
+                createParticlesEffect(x, y, 'kiss');
+                triggerFluidBackground('kiss');
+                sendNetData({ type: 'combo_window_open' });
+                lastTapTime = 0; // Сброс
+                return;
+            }
+            lastTapTime = pointerStartTime;
+
+            // Запуск таймера для Лонг-пресса (Пульс сердца)
+            heartbeatInterval = setTimeout(() => {
+                if (!pointerMoved) {
+                    currentMode = 'heartbeat';
+                    sendNetData({ type: 'gesture_sync_start', x, y });
+                    
+                    // Циклическая генерация волн пульса во время удержания пальца
+                    heartbeatInterval = setInterval(() => {
+                        sendNetData({ type: 'touch', pattern: 'heartbeat', x, y });
+                        createParticlesEffect(x, y, 'heartbeat');
+                        triggerFluidBackground('heartbeat');
+                        if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    }, 400);
+                }
+            }, 300);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+
+            if (Math.abs(e.movementX) > 1 || Math.abs(e.movementY) > 1) {
+                pointerMoved = true;
+            }
+
+            // Передача координат своего движения партнеру (Аура)
+            if (Date.now() - pointerStartTime > 100) {
+                sendNetData({ type: 'partner_move_sync', x, y, active: true });
+            }
+
+            // Режим нежного рисования при свайпе
+            if (pointerMoved) {
+                if (heartbeatInterval) { clearTimeout(heartbeatInterval); heartbeatInterval = null; }
+                sendNetData({ type: 'draw_move', x, y });
+                createParticlesEffect(x, y, 'draw');
+                triggerFluidBackground('draw');
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft');
+            }
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            
+            if (heartbeatInterval) { clearTimeout(heartbeatInterval); }
+            sendNetData({ type: 'partner_move_sync', active: false });
+            triggerFluidBackground('clear');
+
+            let duration = Date.now() - pointerStartTime;
+
+            // Если палец подняли быстро и не двигали — это обычный одиночный Тап
+            if (!pointerMoved && duration < 300 && lastTapTime !== 0) {
+                setTimeout(() => {
+                    // Проверяем, не перерос ли этот тап в дабл-тап
+                    if (Date.now() - lastTapTime >= 280) {
+                        sendNetData({ type: 'touch', pattern: 'tap', x, y });
+                        createParticlesEffect(x, y, 'tap');
+                        triggerFluidBackground('tap');
+                        sendNetData({ type: 'combo_window_open' });
+                    }
+                }, 285);
+            }
+        });
+
+        // Смайлики
         function playEmojiAnimation(emoji) {
             emojiOverlay.textContent = emoji;
             emojiOverlay.classList.add('pop');
-            
-            setTimeout(() => {
-                createParticlesEffect(canvas.width / 2, canvas.height / 2, 'emoji', emoji);
-            }, 120);
-
-            setTimeout(() => emojiOverlay.classList.remove('pop'), 600);
+            setTimeout(() => { createParticlesEffect(canvas.width / 2, canvas.height / 2, 'emoji', emoji); }, 120);
+            setTimeout(() => emojiOverlay.classList.remove('pop'), 550);
         }
 
         document.querySelectorAll('.emoji-btn').forEach(btn => {
@@ -461,29 +556,19 @@
             });
         });
 
-        // ================= НАДЁЖНЫЙ ХАРДВЕРНЫЙ ОТКЛИК =================
+        // Нативные вибрации
         function triggerHaptic(mode) {
             if (!tg || !tg.HapticFeedback) return;
             try {
                 if (mode === 'tap') {
                     tg.HapticFeedback.impactOccurred('heavy');
-                    tg.HapticFeedback.impactOccurred('rigid');
                 } else if (mode === 'heartbeat') {
                     tg.HapticFeedback.notificationOccurred('warning');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning'); }, 180);
-                } else if (mode === 'hug') {
-                    tg.HapticFeedback.notificationOccurred('success');
                 } else if (mode === 'kiss') {
                     tg.HapticFeedback.impactOccurred('heavy');
-                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 80);
+                    setTimeout(() => { if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }, 70);
                 } else if (mode === 'combo') {
                     tg.HapticFeedback.notificationOccurred('success');
-                } else if (mode === 'emoji_heart') {
-                    tg.HapticFeedback.notificationOccurred('success');
-                } else if (mode === 'emoji_fire') {
-                    tg.HapticFeedback.notificationOccurred('error');
-                } else if (mode === 'draw_vibe') {
-                    tg.HapticFeedback.impactOccurred('soft');
                 }
             } catch(e) {}
         }
@@ -496,38 +581,11 @@
             }
         }
 
-        // ================= КАСАНИЯ И КООРДИНАТЫ =================
-        canvas.addEventListener('pointerdown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
-
-            if (currentMode === 'draw') {
-                isDrawing = true;
-                sendNetData({ type: 'draw_start', x, y });
-            } else {
-                sendNetData({ type: 'touch', pattern: currentMode, x, y });
-                createParticlesEffect(x, y, currentMode);
-                sendNetData({ type: 'combo_window_open' });
-            }
-        });
-
-        canvas.addEventListener('pointermove', (e) => {
-            if (!isDrawing || currentMode !== 'draw') return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
-
-            sendNetData({ type: 'draw_move', x, y });
-            createParticlesEffect(x, y, 'draw');
-            triggerHaptic('draw_vibe');
-        });
-
-        canvas.addEventListener('pointerup', () => { isDrawing = false; });
-
         document.querySelectorAll('.status-bubble').forEach(el => {
             el.addEventListener('click', () => {
                 const alreadyActive = el.classList.contains('active');
                 document.querySelectorAll('.status-bubble').forEach(b => b.classList.remove('active'));
-                let currentStatus = "Обычное";
+                let currentStatus = "🤍";
                 if (!alreadyActive) {
                     el.classList.add('active');
                     currentStatus = el.dataset.status;
@@ -545,35 +603,29 @@
 
         function handleComboSuccess() {
             comboBtn.style.display = 'none'; comboActiveByPartner = false;
-            document.body.classList.add('combo-active');
             showOverlay('combo'); triggerHaptic('combo');
-            
-            // Запуск мощного зеленого салюта на весь холст!
             createParticlesEffect(canvas.width / 2, canvas.height / 2, 'combo');
-            
             comboScore++; updateScoreUI();
-            setTimeout(() => document.body.classList.remove('combo-active'), 1500);
         }
 
         // РИТМЫ
-        rhythmBtn.addEventListener('pointerdown', (e) => {
-            e.preventDefault(); e.stopPropagation();
+        rhythmBtn.addEventListener('click', () => {
             isRecordingRhythm = true; rhythmStartTime = Date.now(); recordedTaps = [];
-            rhythmBtn.textContent = "🔴 Запись..."; rhythmOverlay.style.display = 'flex';
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            rhythmBtn.textContent = "🔴 Запись ритма (нажмите Настройки для отмены)..."; rhythmOverlay.style.display = 'flex';
+            menuOverlay.classList.remove('open'); setTimeout(() => menuOverlay.style.display = 'none', 300);
         });
 
         rhythmPad.addEventListener('pointerdown', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            if (!isRecordingRhythm) return;
+            e.preventDefault(); if (!isRecordingRhythm) return;
             recordedTaps.push(Date.now() - rhythmStartTime);
-            triggerHaptic('tap');
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         });
 
-        rhythmBtn.addEventListener('pointerup', (e) => {
-            e.preventDefault(); if (!isRecordingRhythm) return;
-            isRecordingRhythm = false; rhythmBtn.textContent = "Запись Ритма 🥁"; rhythmOverlay.style.display = 'none';
-            if (recordedTaps.length > 0) sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
+        rhythmOverlay.addEventListener('click', (e) => {
+            if (e.target === rhythmOverlay) {
+                isRecordingRhythm = false; rhythmOverlay.style.display = 'none';
+                if (recordedTaps.length > 0) sendNetData({ type: 'custom_rhythm', taps: recordedTaps });
+            }
         });
 
         // ================= СЕТЕВЫЕ СИГНАЛЫ =================
@@ -582,26 +634,32 @@
 
             if (data.type === 'system_status') {
                 if (data.text.includes('2')) {
-                    badge.classList.add('online'); statusText.textContent = 'В сети';
+                    badge.classList.add('online'); statusText.textContent = 'Пара подключена';
+                    document.body.classList.add('couple-breathing'); // Активируем дыхание
                 } else {
-                    badge.classList.remove('online'); statusText.textContent = 'Поиск...';
+                    badge.classList.remove('online'); statusText.textContent = 'Поиск пары...';
+                    document.body.classList.remove('couple-breathing');
                 }
             } 
             else if (data.type === 'send_emoji') {
                 playEmojiAnimation(data.emoji);
-                if (data.emoji === '❤️' || data.emoji === '😘') triggerHaptic('emoji_heart');
-                else if (data.emoji === '🔥' || data.emoji === '🎉') triggerHaptic('emoji_fire');
-                else triggerHaptic('tap');
+                triggerHaptic('tap');
+            }
+            // Синхронизация ауры перемещения партнера
+            else if (data.type === 'partner_move_sync') {
+                partnerPointer.x = data.x;
+                partnerPointer.y = data.y;
+                partnerPointer.active = data.active;
+                if (data.active) partnerPointer.intensity = 1.0;
             }
             else if (data.type === 'touch') {
                 triggerHaptic(data.pattern); showOverlay(data.pattern);
                 createParticlesEffect(data.x || canvas.width/2, data.y || canvas.height/2, data.pattern);
-                document.body.classList.add("touch-" + data.pattern);
-                setTimeout(() => document.body.classList.remove("touch-" + data.pattern), 500);
+                triggerFluidBackground(data.pattern);
+                setTimeout(() => triggerFluidBackground('clear'), 700);
             }
-            else if (data.type === 'draw_start' || data.type === 'draw_move') {
+            else if (data.type === 'draw_move') {
                 createParticlesEffect(data.x, data.y, 'draw');
-                triggerHaptic('draw_vibe');
             }
             else if (data.type === 'combo_window_open') {
                 comboActiveByPartner = true; comboBtn.style.display = 'block';
@@ -616,16 +674,8 @@
                 });
             }
             else if (data.type === 'change_theme') { changeTheme(data.theme, false); }
-            else if (data.type === 'change_status') { partnerStatusEl.textContent = `Партнер: ${data.status}`; }
+            else if (data.type === 'change_status') { partnerStatusEl.textContent = data.status; }
         };
-
-        document.querySelectorAll('.mode-btn:not(.special)').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const activeBtn = document.querySelector('.mode-btn.active');
-                if (activeBtn) activeBtn.classList.remove('active');
-                btn.classList.add('active'); currentMode = btn.dataset.mode;
-            });
-        });
 
         function sendNetData(obj) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
     </script>
