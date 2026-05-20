@@ -1,7 +1,10 @@
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
+import WebSocket, { WebSocketServer } from 'ws';
 
-const rooms = {}; 
+// Вместо const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
+const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
+
+// Хранилище активных комнат
+const rooms = {};
 
 wss.on('connection', (ws) => {
     let currentRoom = null;
