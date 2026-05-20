@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Прикосновения Ультра 6.0 ♾️</title>
+    <title>Прикосновения Ультра 7.0 ♾️</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, sans-serif; user-select: none; }
@@ -19,14 +19,13 @@
         body.theme-cyber { background: #02020b; --panel-bg: rgba(11, 11, 38, 0.6); --accent: #00f0ff; --border: rgba(0, 240, 255, 0.2); }
         body.theme-pastel { background: #0f0b16; --panel-bg: rgba(45, 34, 60, 0.6); --accent: #ff758f; --border: rgba(114, 9, 183, 0.3); }
 
-        /* Эффект синхронного дыхания */
+        /* Синхронное дыхание */
         body.couple-breathing { animation: breath 6s ease-in-out infinite alternate; }
         @keyframes breath {
             0% { box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.01); }
             100% { box-shadow: inset 0 0 50px var(--border); }
         }
 
-        /* Оверлей теплового замка */
         body.lock-active { background: #100511 !important; animation: lockGlow 2s infinite alternate; }
         @keyframes lockGlow { 0% { box-shadow: inset 0 0 40px rgba(114,9,183,0.2); } 100% { box-shadow: inset 0 0 70px rgba(255,51,102,0.4); } }
 
@@ -47,6 +46,7 @@
             cursor: pointer; backdrop-filter: blur(8px); transition: all 0.2s;
         }
 
+        /* Интерактивный холст */
         .interactive-zone {
             position: relative; flex-grow: 1; margin: 5px 0;
             border-radius: 32px; overflow: hidden;
@@ -61,12 +61,32 @@
         }
         #emoji-anim-overlay.pop { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(8deg); }
 
-        .gesture-hint {
-            text-align: center; font-size: 0.75rem; color: #444455; padding: 10px 0 5px 0;
-            letter-spacing: 0.3px; pointer-events: none;
+        /* ВНЕДРЁННЫЙ ЖИДКИЙ ДОК С КНОПКАМИ ДЕЙСТВИЙ */
+        .action-dock {
+            display: flex; justify-content: space-around; align-items: center;
+            background: var(--panel-bg); border: 1px solid var(--border);
+            padding: 10px 14px; border-radius: 24px; margin-top: 8px;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            z-index: 10; transition: all 0.3s ease;
         }
+        .mode-btn {
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+            background: none; border: none; color: #777; font-size: 0.75rem; font-weight: 500;
+            cursor: pointer; padding: 8px 4px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .mode-btn .icon { font-size: 1.35rem; transition: transform 0.2s; }
+        .mode-btn.active {
+            color: #fff; background: rgba(255, 255, 255, 0.05); font-weight: bold;
+        }
+        .mode-btn.active .icon { transform: scale(1.18); }
+        
+        /* Специфические цвета подсветок активных кнопок */
+        #btn-tap.active { color: #00b4d8; box-shadow: inset 0 0 10px rgba(0,180,216,0.15); }
+        #btn-heartbeat.active { color: #ff3366; box-shadow: inset 0 0 10px rgba(255,51,102,0.15); }
+        #btn-kiss.active { color: #ff758f; box-shadow: inset 0 0 10px rgba(255,117,143,0.15); }
+        #btn-draw.active { color: #b5179e; box-shadow: inset 0 0 10px rgba(181,23,158,0.15); }
 
-        /* МОДАЛКА КАПСУЛЫ ВРЕМЕНИ */
+        /* Модалка капсул */
         #capsule-modal {
             position: fixed; inset: 0; background: rgba(5,5,8,0.9); backdrop-filter: blur(20px);
             z-index: 60000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
@@ -74,21 +94,16 @@
         .capsule-card {
             background: #12121a; border: 1px solid rgba(255,255,255,0.08); width: 100%; max-width: 320px;
             padding: 24px; border-radius: 28px; display: flex; flex-direction: column; gap: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
         .capsule-input {
             width: 100%; background: #181824; border: 1px solid #2d2d3f; padding: 14px;
             border-radius: 16px; color: #fff; font-size: 0.95rem; outline: none; resize: none; height: 90px;
         }
-        .capsule-btn {
-            background: var(--accent); border: none; color: #fff; padding: 12px;
-            border-radius: 14px; font-weight: bold; cursor: pointer; text-align: center;
-        }
+        .capsule-btn { background: var(--accent); border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: bold; cursor: pointer; }
 
-        /* СТЕКЛЯННОЕ ВСПЛЫВАЮЩЕЕ МЕНЮ */
+        /* Стеклянное меню настроек */
         #native-menu-overlay {
-            position: fixed; inset: 0; background: rgba(3, 3, 5, 0.6);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            position: fixed; inset: 0; background: rgba(3, 3, 5, 0.6); backdrop-filter: blur(15px);
             z-index: 50000; display: none; align-items: flex-end; justify-content: center;
         }
         .menu-sheet {
@@ -100,19 +115,16 @@
         
         .menu-section { display: flex; flex-direction: column; gap: 10px; }
         .menu-section-title { font-size: 0.75rem; color: #555566; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; }
-        
-        .score-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); padding: 14px; border-radius: 18px; text-align: center; font-weight: 600; color: var(--accent); font-size: 1rem; }
+        .score-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); padding: 14px; border-radius: 18px; text-align: center; font-weight: 600; color: var(--accent); }
         .status-bar { display: flex; gap: 8px; justify-content: space-between; }
-        .status-bubble { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 11px 5px; text-align: center; border-radius: 14px; font-size: 0.8rem; color: #ccc; cursor: pointer; transition: all 0.2s; }
+        .status-bubble { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 11px 5px; text-align: center; border-radius: 14px; font-size: 0.8rem; color: #ccc; cursor: pointer; }
         .status-bubble.active { border-color: var(--accent); background: rgba(255,51,102,0.08); color: #fff; font-weight: bold; }
         
-        .emoji-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; gap: 5px; }
-        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; transition: transform 0.15s; }
-
+        .emoji-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; }
+        .emoji-btn { font-size: 1.6rem; background: none; border: none; cursor: pointer; }
         .theme-selector { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 16px; justify-content: center; }
-        .theme-opt { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #aaa; cursor: pointer; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 12px; border: 1px solid transparent; }
+        .theme-opt { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #aaa; cursor: pointer; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 12px; }
         .theme-opt.active { border-color: var(--accent); color: var(--accent); font-weight: bold; }
-        
         .close-menu-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 14px; border-radius: 16px; font-weight: bold; cursor: pointer; text-align: center; }
 
         #pairing-screen { position: fixed; inset: 0; background: #07070a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 20px; }
@@ -125,16 +137,16 @@
 
     <div id="capsule-modal">
         <div class="capsule-card">
-            <h3 style="margin: 0; font-size: 1.05rem; text-align: center;">Оставить прикосновение ✉️</h3>
-            <p style="color: #666; font-size: 0.75rem; margin: 0; text-align: center;">Оно останется в этой точке экрана, пока партнёр не прикоснётся к нему.</p>
-            <textarea id="capsule-text" class="capsule-input" placeholder="Напиши что-то нежное..."></textarea>
-            <button id="save-capsule-btn" class="capsule-btn">Сохранить в этой точке</button>
+            <h3 style="margin: 0; font-size: 1.05rem; text-align: center;">Оставить прикосновения ✉️</h3>
+            <p style="color: #666; font-size: 0.75rem; margin: 0; text-align: center;">Послание застынет на холсте, пока партнёр не откроет его тапом.</p>
+            <textarea id="capsule-text" class="capsule-input" placeholder="Напиши что-то тёплое..."></textarea>
+            <button id="save-capsule-btn" class="capsule-btn">Закрыть в этой точке</button>
             <button id="close-capsule-btn" style="background:none; border:none; color:#555; cursor:pointer; font-size:0.8rem;">Отмена</button>
         </div>
     </div>
 
     <div id="pairing-screen">
-        <h2>Прикосновения Ультра ♾️</h2>
+        <h2>Прикосновения Ультра 7.0 ♾️</h2>
         <p style="color: #444455; font-size: 0.85rem; margin: 0;">Вместе сквозь расстояние</p>
         <input type="text" id="room-input" class="input-field" placeholder="Код вашей комнаты">
         <button id="connect-btn" class="primary-btn">Войти в пространство</button>
@@ -144,6 +156,7 @@
         <div>
             <div id="status-badge" class="status-badge"><div class="dot"></div> <span id="status-text">Поиск пары...</span></div>
             <span id="partner-status" style="font-size: 0.75rem; color: #444455; margin-left: 8px;">🤍</span>
+            <span id="partner-mode-indicator" style="font-size: 0.7rem; color: #444; margin-left: 4px; transition: color 0.3s;"></span>
         </div>
         <button class="menu-toggle-btn" id="open-menu-btn">Настройки</button>
     </header>
@@ -153,10 +166,28 @@
         <canvas id="touch-canvas"></canvas>
     </div>
 
+    <div class="action-dock">
+        <button class="mode-btn active" id="btn-tap" data-mode="tap">
+            <span class="icon">⚡</span>
+            <span>Искра</span>
+        </button>
+        <button class="mode-btn" id="btn-heartbeat" data-mode="heartbeat">
+            <span class="icon">❤️</span>
+            <span>Пульс</span>
+        </button>
+        <button class="mode-btn" id="btn-kiss" data-mode="kiss">
+            <span class="icon">💋</span>
+            <span>Поцелуй</span>
+        </button>
+        <button class="mode-btn" id="btn-draw" data-mode="draw">
+            <span class="icon">🎨</span>
+            <span>Линия</span>
+        </button>
+    </div>
+
     <div id="native-menu-overlay">
         <div class="menu-sheet">
             <h3 style="margin: 0; text-align: center; font-size: 1rem; font-weight: 600; color: #eee;">Связь между вами ✨</h3>
-            
             <div class="score-box" id="score-display">Уровень связи: 1 (0 Комбо) ❤️</div>
 
             <div class="menu-section">
@@ -172,7 +203,6 @@
                     <button class="emoji-btn" data-emoji="😘">😘</button>
                     <button class="emoji-btn" data-emoji="🎉">🎉</button>
                     <button class="emoji-btn" data-emoji="✨">✨</button>
-                    <button class="emoji-btn" data-emoji="💩">💩</button>
                 </div>
             </div>
 
@@ -198,10 +228,6 @@
         </div>
     </div>
 
-    <div class="gesture-hint">
-        Удержание в одной точке вместе — Тепловой Замок ♾️ • Дабл-тап — поцелуй
-    </div>
-
     <script>
         const tg = window.Telegram.WebApp;
         if (tg) { tg.expand(); tg.ready(); }
@@ -219,9 +245,9 @@
         const canvas = document.getElementById('touch-canvas');
         const ctx = canvas.getContext('2d');
         const partnerStatusEl = document.getElementById('partner-status');
+        const partnerModeIndicator = document.getElementById('partner-mode-indicator');
         const emojiOverlay = document.getElementById('emoji-anim-overlay');
         
-        // Элементы капсул
         const capsuleModal = document.getElementById('capsule-modal');
         const capsuleText = document.getElementById('capsule-text');
         const saveCapsuleBtn = document.getElementById('save-capsule-btn');
@@ -230,27 +256,42 @@
 
         let particles = [];
         let comboScore = parseInt(localStorage.getItem('touch_combo_score') || '0');
-        let partnerOnline = false;
+        let currentMode = 'tap'; // Базовый выбранный режим кнопок
 
-        // Жесты и трекинг
+        // Координаты рук
         let myPointer = { x: 0, y: 0, active: false };
         let partnerPointer = { x: 0, y: 0, active: false, intensity: 0 };
-        let pointerStartTime = 0;
         let pointerMoved = false;
-        let lastTapTime = 0;
         let heartbeatInterval = null;
         let lockInterval = null;
         let isLockActive = false;
 
-        // Массив локальных и полученных капсул времени
         let timeCapsules = []; 
         let pendingCapsuleCoords = { x: 0, y: 0 };
 
         const fluidColors = {
-            tap: "rgba(0, 180, 216, 0.12)", heartbeat: "rgba(255, 77, 109, 0.12)",
-            kiss: "rgba(255, 117, 143, 0.15)", draw: "rgba(114, 9, 183, 0.08)",
+            tap: "rgba(0, 180, 216, 0.08)", heartbeat: "rgba(255, 77, 109, 0.08)",
+            kiss: "rgba(255, 117, 143, 0.12)", draw: "rgba(114, 9, 183, 0.06)",
             lock: "rgba(114, 9, 183, 0.25)", clear: "transparent"
         };
+
+        const modeIndicatorColors = {
+            tap: '#00b4d8', heartbeat: '#ff3366', kiss: '#ff758f', draw: '#b5179e'
+        };
+
+        // Логика переключения кнопками из дока
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                
+                triggerFluidBackground(currentMode); // Слегка подсвечиваем холст цветом выбранного режима
+                sendNetData({ type: 'mode_change_sync', mode: currentMode });
+                
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            });
+        });
 
         openMenuBtn.addEventListener('click', () => {
             menuOverlay.style.display = 'flex';
@@ -273,7 +314,7 @@
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
             ws.onopen = () => startApp(roomInput.value.trim());
         } else {
-            const savedRoom = localStorage.getItem('tg_room_code_v5');
+            const savedRoom = localStorage.getItem('tg_room_code_v7');
             if (savedRoom) roomInput.value = savedRoom;
         }
 
@@ -284,7 +325,7 @@
         });
 
         function startApp(roomCode) {
-            localStorage.setItem('tg_room_code_v5', roomCode);
+            localStorage.setItem('tg_room_code_v7', roomCode);
             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'join', room: roomCode }));
             pairingScreen.style.display = 'none';
             resizeCanvas();
@@ -307,11 +348,14 @@
             const zone = document.getElementById('zone');
             zone.style.background = fluidColors[action] || fluidColors.clear;
             if (action !== 'clear' && action !== 'draw' && action !== 'heartbeat' && action !== 'lock') {
-                setTimeout(() => { zone.style.background = fluidColors.clear; }, 900);
+                setTimeout(() => { 
+                    // Возвращаем фоновую подсветку текущего активного режима
+                    zone.style.background = fluidColors[currentMode] || fluidColors.clear; 
+                }, 900);
             }
         }
 
-        // ================= ДВИЖОК ЭФФЕКТОВ ЧАСТИЦ =================
+        // ================= ЧАСТИЦЫ =================
         class Particle {
             constructor(x, y, actionType, customChar = '') {
                 this.x = x; this.y = y; this.type = actionType; this.char = customChar;
@@ -321,7 +365,7 @@
                 if (this.type === 'tap') {
                     this.size = Math.random() * 3 + 3;
                     this.speedX = (Math.random() - 0.5) * 6; this.speedY = (Math.random() - 0.5) * 6;
-                    this.decay = Math.random() * 0.02 + 0.02; this.color = Math.random() > 0.4 ? '#00b4d8' : '#ffb703';
+                    this.decay = Math.random() * 0.02 + 0.02; this.color = '#00b4d8';
                 } 
                 else if (this.type === 'heartbeat') {
                     this.size = Math.random() * 5 + 4;
@@ -336,8 +380,7 @@
                 else if (this.type === 'draw') {
                     this.size = Math.random() * 4 + 4;
                     this.speedX = (Math.random() - 0.5) * 0.8; this.speedY = (Math.random() - 0.5) * 0.8;
-                    this.decay = 0.03; const hues = [190, 290, 340];
-                    this.color = `hsl(${hues[Math.floor(Math.random() * hues.length)]}, 90%, 65%)`;
+                    this.decay = 0.03; this.color = '#b5179e';
                 }
                 else if (this.type === 'lock_fire') {
                     this.size = Math.random() * 4 + 3;
@@ -353,7 +396,7 @@
 
             update() {
                 this.x += this.speedX; this.y += this.speedY; this.alpha -= this.decay;
-                if (this.type === 'heartbeat') this.size += 0.3;
+                if (this.type === 'heartbeat') this.size += 0.2;
             }
 
             draw() {
@@ -380,24 +423,20 @@
             for (let i = 0; i < count; i++) { particles.push(new Particle(x, y, type, char)); }
         }
 
-        // РЕНДЕР ЦИКЛ (Аура + Частицы + Капсулы времени)
+        // РЕНДЕР ЦИКЛ
         function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Отрисовка Капсул Времени на холсте
+            // 1. Отрисовка Капсул Времени
             timeCapsules.forEach(capsule => {
                 ctx.save();
                 let pulseSize = 14 + Math.sin(Date.now() * 0.003) * 4;
                 let grad = ctx.createRadialGradient(capsule.x, capsule.y, 2, capsule.x, capsule.y, pulseSize);
-                grad.addColorStop(0, 'rgba(255, 117, 143, 0.5)');
-                grad.addColorStop(0.5, 'rgba(255, 117, 143, 0.15)');
+                grad.addColorStop(0, 'rgba(255, 117, 143, 0.4)');
                 grad.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grad;
                 ctx.beginPath(); ctx.arc(capsule.x, capsule.y, pulseSize, 0, Math.PI*2); ctx.fill();
-                
-                // Иконка письма в центре
-                ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                ctx.font = '10px sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '10px sans-serif';
                 ctx.fillText('✉️', capsule.x - 6, capsule.y + 4);
                 ctx.restore();
             });
@@ -405,13 +444,14 @@
             // 2. Отрисовка Ауры партнера
             if (partnerPointer.active && partnerPointer.intensity > 0) {
                 ctx.save();
-                let activeAccent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#ff3366';
                 let radius = isLockActive ? 120 : 75;
                 let gradient = ctx.createRadialGradient(
                     partnerPointer.x, partnerPointer.y, 2, 
                     partnerPointer.x, partnerPointer.y, radius * partnerPointer.intensity
                 );
-                gradient.addColorStop(0, activeAccent.replace(')', ', 0.25)').replace('rgb', 'rgba'));
+                // Подсвечиваем ауру партнера цветом ЕГО активного режима
+                let partnerColor = modeIndicatorColors[partnerPointer.currentMode || 'tap'] || '#ff3366';
+                gradient.addColorStop(0, partnerColor + '40'); // 25% альфа
                 gradient.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = gradient;
                 ctx.beginPath(); ctx.arc(partnerPointer.x, partnerPointer.y, radius + 20, 0, Math.PI * 2); ctx.fill();
@@ -430,14 +470,13 @@
         }
         requestAnimationFrame(renderLoop);
 
-        // Проверка сближения пальцев для активации Теплового Замка
+        // Проверка на Тепловой Замок
         function checkThermalLock() {
             if (myPointer.active && partnerPointer.active) {
                 let dx = myPointer.x - partnerPointer.x;
                 let dy = myPointer.y - partnerPointer.y;
                 let distance = Math.sqrt(dx * dx + dy * dy);
 
-                // Если пальцы сошлись ближе 42 пикселей — замок замыкается
                 if (distance < 42) {
                     if (!isLockActive) {
                         isLockActive = true;
@@ -446,111 +485,89 @@
                         
                         lockInterval = setInterval(() => {
                             createParticlesEffect((myPointer.x + partnerPointer.x)/2, (myPointer.y + partnerPointer.y)/2, 'lock_fire');
-                            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft'); // Постоянное нежное шуршание
+                            if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('soft');
                             comboScore++; updateScoreUI();
                         }, 250);
                     }
                     return;
                 }
             }
-            // Разрыв замка
             if (isLockActive) {
                 isLockActive = false;
                 document.body.classList.remove('lock-active');
-                triggerFluidBackground('clear');
+                triggerFluidBackground(currentMode);
                 clearInterval(lockInterval);
             }
         }
 
-        // ================= ЛОГИКА ЖЕСТОВ С КАНВАСА =================
+        // ================= ОБРАБОТКА ИНТЕРАКЦИЙ НА ХОЛСТЕ =================
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             myPointer.x = e.clientX - rect.left; myPointer.y = e.clientY - rect.top;
             myPointer.active = true;
-            pointerStartTime = Date.now(); pointerMoved = false;
+            pointerMoved = false;
 
-            // Проверка: Наступил ли тап на существующую капсулу времени?
+            // Проверка нажатия на Капсулу Времени
             let clickedCapsuleIndex = timeCapsules.findIndex(c => {
-                let dist = Math.sqrt(Math.pow(c.x - myPointer.x, 2) + Math.pow(c.y - myPointer.y, 2));
-                return dist < 25;
+                return Math.sqrt(Math.pow(c.x - myPointer.x, 2) + Math.pow(c.y - myPointer.y, 2)) < 25;
             });
 
             if (clickedCapsuleIndex !== -1) {
                 let cap = timeCapsules[clickedCapsuleIndex];
                 if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                alert(`Капсула времени от партнёра: \n\n"${cap.text}"`);
-                timeCapsules.splice(clickedCapsuleIndex, 1); // Удаляем прочитанную
+                alert(`Капсула времени: \n\n"${cap.text}"`);
+                timeCapsules.splice(clickedCapsuleIndex, 1);
                 sendNetData({ type: 'capsule_read', x: cap.x, y: cap.y });
-                myPointer.active = false;
-                return;
+                myPointer.active = false; return;
             }
 
-            // Дабл-тап (Поцелуй)
-            if (pointerStartTime - lastTapTime < 280) {
-                clearTimeout(heartbeatInterval);
-                sendNetData({ type: 'touch', pattern: 'kiss', x: myPointer.x, y: myPointer.y });
-                createParticlesEffect(myPointer.x, myPointer.y, 'kiss');
-                triggerFluidBackground('kiss');
-                lastTapTime = 0; return;
-            }
-            lastTapTime = pointerStartTime;
+            // Выполнение действия в зависимости от ВЫБРАННОГО в доке режима
+            executeAction(myPointer.x, myPointer.y);
 
-            // Проверка на удержание пальца (Пульс)
-            heartbeatInterval = setTimeout(() => {
-                if (!pointerMoved && !isLockActive) {
-                    heartbeatInterval = setInterval(() => {
-                        if (isLockActive) return;
-                        sendNetData({ type: 'touch', pattern: 'heartbeat', x: myPointer.x, y: myPointer.y });
-                        createParticlesEffect(myPointer.x, myPointer.y, 'heartbeat');
-                        triggerFluidBackground('heartbeat');
-                        if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                    }, 400);
-                }
-            }, 300);
+            if (currentMode === 'heartbeat') {
+                heartbeatInterval = setInterval(() => {
+                    if (isLockActive) return;
+                    executeAction(myPointer.x, myPointer.y);
+                }, 400);
+            }
         });
 
         canvas.addEventListener('pointermove', (e) => {
             if (!myPointer.active) return;
             const rect = canvas.getBoundingClientRect();
             myPointer.x = e.clientX - rect.left; myPointer.y = e.clientY - rect.top;
+            pointerMoved = true;
 
-            if (Math.abs(e.movementX) > 1 || Math.abs(e.movementY) > 1) pointerMoved = true;
-
-            sendNetData({ type: 'partner_move_sync', x: myPointer.x, y: myPointer.y, active: true });
+            sendNetData({ type: 'partner_move_sync', x: myPointer.x, y: myPointer.y, active: true, mode: currentMode });
             checkThermalLock();
 
-            if (pointerMoved && !isLockActive) {
-                if (heartbeatInterval) { clearTimeout(heartbeatInterval); }
+            if (currentMode === 'draw') {
                 sendNetData({ type: 'draw_move', x: myPointer.x, y: myPointer.y });
                 createParticlesEffect(myPointer.x, myPointer.y, 'draw');
-                triggerFluidBackground('draw');
             }
         });
 
         canvas.addEventListener('pointerup', () => {
             myPointer.active = false;
-            if (heartbeatInterval) clearTimeout(heartbeatInterval);
+            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
             sendNetData({ type: 'partner_move_sync', active: false });
-            triggerFluidBackground('clear');
             checkThermalLock();
-
-            let duration = Date.now() - pointerStartTime;
-            // Одиночный быстрый тап
-            if (!pointerMoved && duration < 300 && lastTapTime !== 0) {
-                setTimeout(() => {
-                    if (Date.now() - lastTapTime >= 280 && !isLockActive) {
-                        sendNetData({ type: 'touch', pattern: 'tap', x: myPointer.x, y: myPointer.y });
-                        createParticlesEffect(myPointer.x, myPointer.y, 'tap');
-                        triggerFluidBackground('tap');
-                    }
-                }, 285);
-            }
         });
 
-        // ================= УПРАВЛЕНИЕ КАПСУЛАМИ ВРЕМЕНИ =================
+        function executeAction(x, y) {
+            if (isLockActive) return;
+            sendNetData({ type: 'touch', pattern: currentMode, x, y });
+            createParticlesEffect(x, y, currentMode);
+            triggerFluidBackground(currentMode);
+
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred(currentMode === 'kiss' ? 'heavy' : 'medium');
+            }
+        }
+
+        // ================= КАПСУЛЫ ВРЕМЕНИ =================
         menuCapsuleBtn.addEventListener('click', () => {
             menuOverlay.classList.remove('open'); menuOverlay.style.display = 'none';
-            // Генерируем случайную или центральную точку на холсте для размещения из меню
             pendingCapsuleCoords = { x: canvas.width / 2 + (Math.random() - 0.5)*60, y: canvas.height / 2 + (Math.random() - 0.5)*60 };
             capsuleText.value = ''; capsuleModal.style.display = 'flex';
         });
@@ -558,12 +575,9 @@
         saveCapsuleBtn.addEventListener('click', () => {
             let text = capsuleText.value.trim();
             if (!text) return alert('Введите текст сообщения!');
-            
             let newCapsule = { x: pendingCapsuleCoords.x, y: pendingCapsuleCoords.y, text: text };
             sendNetData({ type: 'create_capsule', capsule: newCapsule });
-            
             capsuleModal.style.display = 'none';
-            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         });
 
         closeCapsuleBtn.addEventListener('click', () => capsuleModal.style.display = 'none');
@@ -589,33 +603,39 @@
             });
         });
 
-        // ================= СЕТЕВАЯ СИНХРОНИЗАЦИЯ =================
+        // ================= СЕТЕВАЯ ОБРАБОТКА =================
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
             if (data.type === 'system_status') {
                 if (data.text.includes('2')) {
                     badge.classList.add('online'); statusText.textContent = 'Пара подключена';
-                    document.body.classList.add('couple-breathing'); partnerOnline = true;
+                    document.body.classList.add('couple-breathing');
                 } else {
                     badge.classList.remove('online'); statusText.textContent = 'Поиск пары...';
-                    document.body.classList.remove('couple-breathing'); partnerOnline = false;
+                    document.body.classList.remove('couple-breathing');
                 }
             } 
             else if (data.type === 'partner_move_sync') {
                 partnerPointer.x = data.x; partnerPointer.y = data.y;
                 partnerPointer.active = data.active;
+                partnerPointer.currentMode = data.mode; // Сохраняем, какой режим выбран у партнёра
                 if (data.active) partnerPointer.intensity = 1.0;
                 checkThermalLock();
             }
+            // Синхронизация выбранного режима партнёра в хэдере
+            else if (data.type === 'mode_change_sync') {
+                const modeIcons = { tap: '⚡', heartbeat: '❤️', kiss: '💋', draw: '🎨' };
+                partnerModeIndicator.textContent = `(готовит ${modeIcons[data.mode] || ''})`;
+                partnerModeIndicator.style.color = modeIndicatorColors[data.mode] || '#444';
+            }
             else if (data.type === 'touch') {
                 if (isLockActive) return;
-                showOverlay(data.pattern); triggerFluidBackground(data.pattern);
+                triggerFluidBackground(data.pattern);
                 createParticlesEffect(data.x || canvas.width/2, data.y || canvas.height/2, data.pattern);
                 if (tg && tg.HapticFeedback) {
                     tg.HapticFeedback.impactOccurred(data.pattern === 'kiss' ? 'heavy' : 'medium');
                 }
-                setTimeout(() => triggerFluidBackground('clear'), 700);
             }
             else if (data.type === 'draw_move') {
                 createParticlesEffect(data.x, data.y, 'draw');
@@ -623,7 +643,6 @@
             else if (data.type === 'send_emoji') {
                 playEmojiAnimation(data.emoji);
             }
-            // Сетевая обработка Капсул Времени
             else if (data.type === 'create_capsule') {
                 timeCapsules.push(data.capsule);
             }
