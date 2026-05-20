@@ -19,6 +19,15 @@
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
         }
+
+        /* ИСКЛЮЧЕНИЕ: разрешаем клики, фокус и ввод в модалках и экранах авторизации */
+        input, textarea, button, .capsule-card, .capsule-btn, .primary-btn, .status-bubble {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+            pointer-events: auto !important;
+        }
         
         body {
             margin: 0; padding: 15px; height: 100vh;
@@ -121,7 +130,6 @@
         .capsule-input {
             width: 100%; background: #181824; border: 1px solid #2d2d3f; padding: 14px;
             border-radius: 16px; color: #fff; font-size: 0.95rem; outline: none; resize: none; height: 90px;
-            -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
         .capsule-btn { background: #ff758f; border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: bold; cursor: pointer; outline: none; }
 
@@ -156,7 +164,6 @@
         #pairing-screen h2 { margin: 0; font-weight: 800; color: #fff; }
         #pairing-screen .input-field { 
             width: 100%; max-width: 280px; background: #111116; border: 1px solid #1f1f29; padding: 15px; border-radius: 16px; color: #fff; text-align: center; outline: none;
-            -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
         #pairing-screen .primary-btn { width: 100%; max-width: 280px; background: linear-gradient(135deg, #ff3366, #ff5588); border: none; padding: 15px; border-radius: 16px; color: #fff; font-weight: bold; cursor: pointer; outline: none; }
     </style>
@@ -296,7 +303,8 @@
         let lockInterval = null;
         let isLockActive = false;
 
-        let timeCapsules = []; 
+        // Трехслойное кэширование капсул на устройстве
+        let timeCapsules = JSON.parse(localStorage.getItem('touch_storage_capsules') || '[]'); 
         let pendingCapsuleCoords = { x: 0, y: 0 };
         let isSelectingCapsuleLocation = false;
 
@@ -308,7 +316,12 @@
 
         const modeIndicatorColors = { tap: '#00b4d8', heartbeat: '#ff3366', kiss: '#ff758f', draw: '#b5179e' };
 
-        // Функция обертка для безопасной нативной вибрации
+        function sendNetData(data) {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            }
+        }
+
         function triggerHaptic(type) {
             if (tg && tg.HapticFeedback) {
                 if (type === 'light' || type === 'medium' || type === 'heavy' || type === 'soft' || type === 'rigid') {
@@ -340,6 +353,49 @@
             setTimeout(() => menuOverlay.style.display = 'none', 300);
             triggerHaptic('light');
         });
+
+        menuCapsuleBtn.addEventListener('click', () => {
+            menuOverlay.classList.remove('open');
+            setTimeout(() => { menuOverlay.style.display = 'none'; }, 300);
+            isSelectingCapsuleLocation = true;
+            capsuleBanner.classList.add('show');
+            triggerHaptic('medium');
+        });
+
+        closeCapsuleBtn.addEventListener('click', () => {
+            capsuleModal.style.display = 'none';
+            isSelectingCapsuleLocation = false;
+            capsuleBanner.classList.remove('show');
+        });
+
+        // БРОНЕБОЙНОЕ ИСКАРЯЩЕЕ СОХРАНЕНИЕ ДЛЯ СМАРТФОНОВ
+        function handleCapsuleSave() {
+            let text = capsuleText.value.trim();
+            if (!text) {
+                alert('Введите текст сообщения!');
+                return;
+            }
+            
+            let newCapsule = { 
+                x: Math.round(pendingCapsuleCoords.x), 
+                y: Math.round(pendingCapsuleCoords.y), 
+                text: text 
+            };
+            
+            sendNetData({ type: 'create_capsule', capsule: newCapsule });
+            
+            timeCapsules.push(newCapsule);
+            localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
+            
+            capsuleModal.style.display = 'none';
+            isSelectingCapsuleLocation = false;
+            capsuleBanner.classList.remove('show');
+            
+            triggerHaptic('success');
+        }
+
+        saveCapsuleBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); handleCapsuleSave(); });
+        saveCapsuleBtn.addEventListener('click', (e) => { e.stopPropagation(); });
 
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth;
@@ -396,7 +452,6 @@
             }
         }
 
-        // ================= ЧАСТИЦЫ =================
         class Particle {
             constructor(x, y, actionType, customChar = '') {
                 this.x = x; this.y = y; this.type = actionType; this.char = customChar;
@@ -429,7 +484,6 @@
         function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Капсулы времени
             timeCapsules.forEach(capsule => {
                 ctx.save();
                 let pulseSize = 14 + Math.sin(Date.now() * 0.003) * 4;
@@ -443,21 +497,18 @@
                 ctx.restore();
             });
 
-            // МИНИИГРА: Аура партнера (цель для ловли касаний)
             if (partnerPointer.active && partnerPointer.intensity > 0) {
                 ctx.save();
                 let radius = isLockActive ? 120 : 75;
                 let gradient = ctx.createRadialGradient(partnerPointer.x, partnerPointer.y, 2, partnerPointer.x, partnerPointer.y, radius * partnerPointer.intensity);
                 let partnerColor = modeIndicatorColors[partnerPointer.currentMode || 'tap'] || '#ff3366';
                 
-                // Эффект свечения миниигры
                 gradient.addColorStop(0, partnerColor + '55');
                 gradient.addColorStop(0.4, partnerColor + '20');
                 gradient.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = gradient;
                 ctx.beginPath(); ctx.arc(partnerPointer.x, partnerPointer.y, radius + 25, 0, Math.PI * 2); ctx.fill();
                 
-                // Тонкий прицельный кружок, если касание свежее
                 if (partnerPointer.intensity > 0.4 && !isLockActive) {
                     ctx.strokeStyle = partnerColor + '44';
                     ctx.lineWidth = 1.5;
@@ -466,7 +517,6 @@
                 }
                 ctx.restore();
 
-                // Постепенное угасание следа партнера
                 if (!isLockActive) { 
                     partnerPointer.intensity -= 0.006; 
                     if (partnerPointer.intensity <= 0) partnerPointer.active = false; 
@@ -479,12 +529,10 @@
         }
         requestAnimationFrame(renderLoop);
 
-        // МИНИИГРА ОБЪЯТИЯ (Проверка совпадения координат)
         function checkThermalLock() {
             if (myPointer.active && partnerPointer.active && partnerPointer.intensity > 0.1) {
                 let distance = Math.sqrt(Math.pow(myPointer.x - partnerPointer.x, 2) + Math.pow(myPointer.y - partnerPointer.y, 2));
                 
-                // Если пальцы соприкоснулись — активируются ОБЪЯТИЯ
                 if (distance < 42) {
                     if (!isLockActive) {
                         isLockActive = true;
@@ -493,15 +541,14 @@
                         
                         lockInterval = setInterval(() => {
                             createParticlesEffect((myPointer.x + partnerPointer.x)/2, (myPointer.y + partnerPointer.y)/2, 'lock_fire');
-                            triggerHaptic('soft'); // Мягкий непрерывный вибро-пульс контакта
+                            triggerHaptic('soft');
                             comboScore++; 
                             updateScoreUI();
-                        }, 200); // Чуть ускорили тик для динамики
+                        }, 200);
                     }
                     return;
                 }
             }
-            // Разрыв объятий
             if (isLockActive) { 
                 isLockActive = false; 
                 document.body.classList.remove('lock-active'); 
@@ -510,7 +557,29 @@
             }
         }
 
-        // ================= ОБРАБОТКА ХОЛСТА =================
+        function executeAction(x, y, isPartner = false, modeToUse = null) {
+            let activeMode = modeToUse || currentMode;
+            if (activeMode === 'tap') {
+                createParticlesEffect(x, y, 'tap');
+                if (!isPartner) {
+                    triggerHaptic('medium');
+                    sendNetData({ type: 'touch', pattern: 'tap', x: x, y: y });
+                }
+            } else if (activeMode === 'heartbeat') {
+                createParticlesEffect(x, y, 'heartbeat');
+                if (!isPartner) {
+                    triggerHaptic('heavy');
+                    sendNetData({ type: 'touch', pattern: 'heartbeat', x: x, y: y });
+                }
+            } else if (activeMode === 'kiss') {
+                createParticlesEffect(x, y, 'kiss');
+                if (!isPartner) {
+                    triggerHaptic('rigid');
+                    sendNetData({ type: 'touch', pattern: 'kiss', x: x, y: y });
+                }
+            }
+        }
+
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
             let clickedX = e.clientX - rect.left;
@@ -530,7 +599,6 @@
             myPointer.x = clickedX; myPointer.y = clickedY;
             myPointer.active = true;
 
-            // 1. Проверка клика по капсуле времени
             let clickedCapsuleIndex = timeCapsules.findIndex(c => {
                 return Math.sqrt(Math.pow(c.x - myPointer.x, 2) + Math.pow(c.y - myPointer.y, 2)) < 25;
             });
@@ -540,19 +608,18 @@
                 triggerHaptic('success');
                 alert(`Капсула времени: \n\n"${cap.text}"`);
                 timeCapsules.splice(clickedCapsuleIndex, 1);
+                localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
                 sendNetData({ type: 'capsule_read', x: cap.x, y: cap.y });
                 myPointer.active = false; return;
             }
 
-            // 2. МИНИИГРА: Проверка ловли касания партнера
             if (partnerPointer.active && partnerPointer.intensity > 0.1 && !isLockActive) {
                 let distToPartner = Math.sqrt(Math.pow(myPointer.x - partnerPointer.x, 2) + Math.pow(myPointer.y - partnerPointer.y, 2));
-                // Если попали в зону чужой ауры (ловкость рук)
                 if (distToPartner < 45) {
-                    comboScore += 5; // Даем жирный бонус к комбо
+                    comboScore += 5;
                     updateScoreUI();
                     createParticlesEffect(partnerPointer.x, partnerPointer.y, 'catch_sparks');
-                    triggerHaptic('success'); // Накатывает сочный победный виброотклик
+                    triggerHaptic('success');
                     sendNetData({ type: 'touch', pattern: 'lock_fire', x: partnerPointer.x, y: partnerPointer.y });
                 }
             }
@@ -565,125 +632,129 @@
         });
 
         canvas.addEventListener('pointermove', (e) => {
-            if (!myPointer.active || isSelectingCapsuleLocation) return;
+            if (!myPointer.active) return;
             const rect = canvas.getBoundingClientRect();
-            myPointer.x = e.clientX - rect.left; myPointer.y = e.clientY - rect.top;
-
-            sendNetData({ type: 'partner_move_sync', x: myPointer.x, y: myPointer.y, active: true, mode: currentMode });
-            checkThermalLock();
+            myPointer.x = e.clientX - rect.left;
+            myPointer.y = e.clientY - rect.top;
 
             if (currentMode === 'draw') {
-                sendNetData({ type: 'draw_move', x: myPointer.x, y: myPointer.y });
                 createParticlesEffect(myPointer.x, myPointer.y, 'draw');
+                sendNetData({ type: 'touch', pattern: 'draw', x: myPointer.x, y: myPointer.y });
+            } else if (currentMode === 'tap') {
+                sendNetData({ type: 'touch_move_sync', x: myPointer.x, y: myPointer.y });
             }
-        });
-
-        canvas.addEventListener('pointerup', () => {
-            myPointer.active = false;
-            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-            sendNetData({ type: 'partner_move_sync', active: false });
             checkThermalLock();
         });
 
-        function executeAction(x, y) {
-            if (isLockActive) return;
-            sendNetData({ type: 'touch', pattern: currentMode, x, y });
-            createParticlesEffect(x, y, currentMode);
-            triggerFluidBackground(currentMode);
-            
-            // Дифференцированная тактильная отдача в зависимости от режима
-            if (currentMode === 'tap') triggerHaptic('light');
-            else if (currentMode === 'kiss') triggerHaptic('heavy');
-            else if (currentMode === 'heartbeat') triggerHaptic('medium');
-        }
+        const stopMyPointer = () => {
+            if (!myPointer.active) return;
+            myPointer.active = false;
+            clearInterval(heartbeatInterval);
+            if (isLockActive) {
+                isLockActive = false;
+                document.body.classList.remove('lock-active');
+                triggerFluidBackground(currentMode);
+                clearInterval(lockInterval);
+            }
+            sendNetData({ type: 'touch_leave' });
+        };
+        canvas.addEventListener('pointerup', stopMyPointer);
+        canvas.addEventListener('pointercancel', stopMyPointer);
+        canvas.addEventListener('pointerleave', stopMyPointer);
 
-        menuCapsuleBtn.addEventListener('click', () => {
-            menuOverlay.classList.remove('open'); 
-            setTimeout(() => { menuOverlay.style.display = 'none'; }, 300);
-            isSelectingCapsuleLocation = true;
-            capsuleBanner.classList.add('show');
-            triggerHaptic('light');
-        });
+        ws.onopen = () => {
+            badge.classList.add('online');
+            statusText.textContent = 'Подключено';
+            const savedRoom = localStorage.getItem('tg_room_code_v7.3');
+            if (savedRoom) sendNetData({ type: 'join', room: savedRoom });
+        };
 
-        saveCapsuleBtn.addEventListener('click', () => {
-            let text = capsuleText.value.trim();
-            if (!text) return alert('Введите текст сообщения!');
-            let newCapsule = { x: pendingCapsuleCoords.x, y: pendingCapsuleCoords.y, text: text };
-            sendNetData({ type: 'create_capsule', capsule: newCapsule });
-            timeCapsules.push(newCapsule);
-            capsuleModal.style.display = 'none';
-            triggerHaptic('success');
-        });
+        ws.onclose = () => {
+            badge.classList.remove('online');
+            statusText.textContent = 'Разрыв связи...';
+        };
 
-        closeCapsuleBtn.addEventListener('click', () => {
-            capsuleModal.style.display = 'none';
-            isSelectingCapsuleLocation = false;
-            capsuleBanner.classList.remove('show');
-            triggerHaptic('light');
-        });
-
-        function playEmojiAnimation(emoji) {
-            emojiOverlay.textContent = emoji; emojiOverlay.classList.add('pop');
-            setTimeout(() => { createParticlesEffect(canvas.width / 2, canvas.height / 2, 'emoji', emoji); }, 120);
-            setTimeout(() => emojiOverlay.classList.remove('pop'), 550);
-        }
-
-        document.querySelectorAll('.emoji-btn').forEach(btn => {
-            btn.addEventListener('click', () => { 
-                sendNetData({ type: 'send_emoji', emoji: btn.dataset.emoji }); 
-                playEmojiAnimation(btn.dataset.emoji); 
-                triggerHaptic('medium');
-            });
-        });
-
-        document.querySelectorAll('.status-bubble').forEach(el => {
-            el.addEventListener('click', () => {
-                if(el.id === 'menu-capsule-btn') return;
-                document.querySelectorAll('.status-bubble').forEach(b => { if(b.id !== 'menu-capsule-btn') b.classList.remove('active'); });
-                el.classList.add('active'); 
-                sendNetData({ type: 'change_status', status: el.dataset.status });
-                triggerHaptic('light');
-            });
-        });
-
-        // ================= СЕТЕВАЯ ОБРАБОТКА =================
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
             if (data.type === 'system_status') {
-                if (data.text.includes('2')) { badge.classList.add('online'); statusText.textContent = 'Пара подключена'; document.body.classList.add('couple-breathing'); } 
-                else { badge.classList.remove('online'); statusText.textContent = 'Поиск пары...'; document.body.classList.remove('couple-breathing'); }
-            } 
-            else if (data.type === 'partner_move_sync') {
-                partnerPointer.x = data.x; partnerPointer.y = data.y; partnerPointer.active = data.active; partnerPointer.currentMode = data.mode;
-                if (data.active) partnerPointer.intensity = 1.0; // Сбрасываем силу свечения на максимум при движении
+                if (data.text.includes('2')) {
+                    partnerStatusEl.textContent = '❤️ Пара онлайн';
+                    triggerHaptic('success');
+                } else {
+                    partnerStatusEl.textContent = '🤍';
+                    partnerModeIndicator.textContent = '';
+                }
+            }
+            else if (data.type === 'touch') {
+                partnerPointer.x = data.x; partnerPointer.y = data.y;
+                partnerPointer.active = true; partnerPointer.intensity = 1.0;
+                partnerPointer.currentMode = data.pattern;
+                executeAction(data.x, data.y, true, data.pattern);
+                checkThermalLock();
+            }
+            else if (data.type === 'touch_move_sync') {
+                partnerPointer.x = data.x; partnerPointer.y = data.y;
+                partnerPointer.active = true; partnerPointer.intensity = 1.0;
+                checkThermalLock();
+            }
+            else if (data.type === 'touch_leave') {
+                if (!isLockActive) partnerPointer.intensity = 0.4;
                 checkThermalLock();
             }
             else if (data.type === 'mode_change_sync') {
-                const modeIcons = { tap: '⚡', heartbeat: '❤️', kiss: '💋', draw: '🎨' };
-                partnerModeIndicator.textContent = `(готовит ${modeIcons[data.mode] || ''})`;
+                partnerPointer.currentMode = data.mode;
+                partnerModeIndicator.textContent = `[${data.mode.toUpperCase()}]`;
                 partnerModeIndicator.style.color = modeIndicatorColors[data.mode] || '#444';
             }
-            else if (data.type === 'touch') {
-                if (isLockActive) return;
-                triggerFluidBackground(data.pattern);
-                createParticlesEffect(data.x || canvas.width/2, data.y || canvas.height/2, data.pattern);
-                
-                // Тонкий вибро-клик при получении чужого касания на своем девайсе
-                if (data.pattern === 'kiss') triggerHaptic('heavy');
-                else if (data.pattern === 'heartbeat') triggerHaptic('medium');
-                else if (data.pattern === 'lock_fire') createParticlesEffect(data.x, data.y, 'catch_sparks'); // Взрыв пойманого тапа у партнера
-                else triggerHaptic('light');
+            else if (data.type === 'change_theme') {
+                changeTheme(data.theme, false);
             }
-            else if (data.type === 'draw_move') { createParticlesEffect(data.x, data.y, 'draw'); }
-            else if (data.type === 'send_emoji') { playEmojiAnimation(data.emoji); triggerHaptic('medium'); }
-            else if (data.type === 'create_capsule') { timeCapsules.push(data.capsule); triggerHaptic('warning'); }
-            else if (data.type === 'capsule_read') { timeCapsules = timeCapsules.filter(c => !(c.x === data.x && c.y === data.y)); }
-            else if (data.type === 'change_theme') { changeTheme(data.theme, false); }
-            else if (data.type === 'change_status') { partnerStatusEl.textContent = data.status; }
+            else if (data.type === 'sync_mood_status') {
+                // Синхронизация статусов
+            }
+            else if (data.type === 'instant_emoji') {
+                emojiOverlay.textContent = data.emoji;
+                emojiOverlay.classList.add('pop');
+                createParticlesEffect(canvas.width/2, canvas.height/2, 'emoji', data.emoji);
+                triggerHaptic('warning');
+                setTimeout(() => emojiOverlay.classList.remove('pop'), 1200);
+            }
+            // СИНХРОНИЗАЦИЯ КАПСУЛ НА ЖЕЛЕЗОБЕТОННОМ УРОВНЕ
+            else if (data.type === 'create_capsule') {
+                const exists = timeCapsules.some(c => c.x === data.capsule.x && c.y === data.capsule.y);
+                if (!exists) {
+                    timeCapsules.push(data.capsule);
+                    localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
+                }
+                triggerHaptic('warning'); 
+            }
+            else if (data.type === 'capsule_read') {
+                timeCapsules = timeCapsules.filter(c => !(c.x === data.x && c.y === data.y));
+                localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
+            }
         };
 
-        function sendNetData(obj) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const emo = btn.dataset.emoji;
+                sendNetData({ type: 'instant_emoji', emoji: emo });
+                emojiOverlay.textContent = emo;
+                emojiOverlay.classList.add('pop');
+                createParticlesEffect(canvas.width/2, canvas.height/2, 'emoji', emo);
+                triggerHaptic('medium');
+                setTimeout(() => emojiOverlay.classList.remove('pop'), 1200);
+            });
+        });
+
+        document.querySelectorAll('.status-bar .status-bubble').forEach(bubble => {
+            bubble.addEventListener('click', () => {
+                document.querySelectorAll('.status-bar .status-bubble').forEach(b => b.classList.remove('active'));
+                bubble.classList.add('active');
+                sendNetData({ type: 'sync_mood_status', status: bubble.dataset.status });
+                triggerHaptic('light');
+            });
+        });
     </script>
 </body>
 </html>
