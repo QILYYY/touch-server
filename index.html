@@ -323,15 +323,51 @@
         }
 
         function triggerHaptic(type) {
-            if (tg && tg.HapticFeedback) {
-                if (type === 'light' || type === 'medium' || type === 'heavy' || type === 'soft' || type === 'rigid') {
-                    tg.HapticFeedback.impactOccurred(type);
-                } else if (type === 'success' || type === 'warning' || type === 'error') {
-                    tg.HapticFeedback.notificationOccurred(type);
-                }
+    if (!tg || !tg.HapticFeedback) return;
+
+    try {
+        // Определяем, айфон ли это
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (isIOS) {
+            // --- ЛОГИКА ДЛЯ iOS (iPhone) ---
+            // iOS поддерживает абсолютно все типы из коробки и выдает идеальный Taptic-отклик
+            if (['light', 'medium', 'heavy', 'soft', 'rigid'].includes(type)) {
+                tg.HapticFeedback.impactOccurred(type);
+            } else if (['success', 'warning', 'error'].includes(type)) {
+                tg.HapticFeedback.notificationOccurred(type);
+            }
+        } else {
+            // --- ЛОГИКА ДЛЯ ANDROID И ОСТАЛЬНЫХ ---
+            // Маппим капризные soft/rigid в понятные для Android light/heavy
+            let androidType = type;
+            if (type === 'soft') androidType = 'light';
+            if (type === 'rigid') androidType = 'heavy';
+
+            if (['light', 'medium', 'heavy'].includes(androidType)) {
+                tg.HapticFeedback.impactOccurred(androidType);
+            } else if (['success', 'warning', 'error'].includes(androidType)) {
+                tg.HapticFeedback.notificationOccurred(androidType);
+            } else {
+                // Если передали что-то нестандартное, бьем по классике
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+
+            // Дополнительный fallback-костыль: если на старом Android 
+            // Telegram API не достучался до вибромотора, дублируем через HTML5
+            if (navigator.vibrate) {
+                if (type === 'light' || type === 'soft') navigator.vibrate(20);
+                else if (type === 'medium') navigator.vibrate(45);
+                else if (type === 'heavy' || type === 'rigid') navigator.vibrate(75);
+                else if (type === 'success') navigator.vibrate([40, 30, 40]);
+                else if (type === 'error') navigator.vibrate([60, 50, 100]);
             }
         }
-
+    } catch (error) {
+        console.error("Критическая ошибка Haptic API:", error);
+    }
+}
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
