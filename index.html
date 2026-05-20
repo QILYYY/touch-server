@@ -419,9 +419,12 @@
             startApp(code);
         });
 
-        function startApp(roomCode) {
+       function startApp(roomCode) {
             localStorage.setItem('tg_room_code_v7.3', roomCode);
-            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'join', room: roomCode }));
+            const myId = tg.initDataUnsafe?.user?.id || 'local_user';
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'join', room: roomCode, userId: myId }));
+            }
             pairingScreen.style.display = 'none';
             resizeCanvas();
         }
@@ -710,16 +713,25 @@
             else if (data.type === 'change_theme') {
                 changeTheme(data.theme, false);
             }
+            // --- ИСПРАВЛЕННЫЙ БЛОК СИНХРОНИЗАЦИИ НАСТРОЕНИЯ ---
             else if (data.type === 'sync_mood_status') {
-                // Синхронизация статусов
+                const myId = tg.initDataUnsafe?.user?.id || 'local_user';
+                // Если статус прислал партнёр (ID не совпадает с моим)
+                if (data.userId !== myId) {
+                    partnerStatusEl.textContent = data.status;
+                }
             }
+            else if (data.type === 'mood_sync') {
+                const myId = tg.initDataUnsafe?.user?.id || 'local_user';
+                // Сервер прислал все статусы в комнате при подключении
+                for (const [userId, statusValue] of Object.entries(data.moods)) {
+                    if (Number(userId) !== myId) {
+                        partnerStatusEl.textContent = statusValue;
+                    }
+                }
+            }
+            // ------------------------------------------------
             else if (data.type === 'instant_emoji') {
-                emojiOverlay.textContent = data.emoji;
-                emojiOverlay.classList.add('pop');
-                createParticlesEffect(canvas.width/2, canvas.height/2, 'emoji', data.emoji);
-                triggerHaptic('warning');
-                setTimeout(() => emojiOverlay.classList.remove('pop'), 1200);
-            }
             // СИНХРОНИЗАЦИЯ КАПСУЛ НА ЖЕЛЕЗОБЕТОННОМ УРОВНЕ
             else if (data.type === 'create_capsule') {
                 const exists = timeCapsules.some(c => c.x === data.capsule.x && c.y === data.capsule.y);
@@ -747,11 +759,20 @@
             });
         });
 
-        document.querySelectorAll('.status-bar .status-bubble').forEach(bubble => {
+       document.querySelectorAll('.status-bar .status-bubble').forEach(bubble => {
             bubble.addEventListener('click', () => {
                 document.querySelectorAll('.status-bar .status-bubble').forEach(b => b.classList.remove('active'));
                 bubble.classList.add('active');
-                sendNetData({ type: 'sync_mood_status', status: bubble.dataset.status });
+                
+                // Получаем ID пользователя из Telegram
+                const myId = tg.initDataUnsafe?.user?.id || 'local_user';
+                
+                // Отправляем статус вместе с ID бэкенду
+                sendNetData({ 
+                    type: 'sync_mood_status', 
+                    userId: myId, 
+                    status: bubble.dataset.status 
+                });
                 triggerHaptic('light');
             });
         });
