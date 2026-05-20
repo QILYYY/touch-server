@@ -6,7 +6,20 @@
     <title>Прикосновения Ультра 7.1 ♾️</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, sans-serif; user-select: none; }
+      * { 
+            box-sizing: border-box; 
+            font-family: 'Segoe UI', -apple-system, sans-serif; 
+            
+            /* Отключаем выделение текста */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            
+            /* Отключаем синий или серый квадрат-подсветку при нажатии на iOS/Android */
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none; /* Отключаем системное меню при долгом нажатии на iOS */
+        }
         
         body {
             margin: 0; padding: 15px; height: 100vh;
