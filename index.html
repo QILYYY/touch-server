@@ -887,7 +887,7 @@ function checkThermalLock() {
             statusText.textContent = 'Разрыв связи...';
         };
 
-        ws.onmessage = (event) => {
+   ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
             if (data.type === 'system_status') {
@@ -900,6 +900,7 @@ function checkThermalLock() {
                 }
             }
             else if (data.type === 'touch') {
+                if (currentMode === 'maze') return; // Игнорируем стандартные прикосновения в режиме лабиринта
                 partnerPointer.x = data.x; partnerPointer.y = data.y;
                 partnerPointer.active = true; partnerPointer.intensity = 1.0;
                 partnerPointer.currentMode = data.pattern;
@@ -907,16 +908,17 @@ function checkThermalLock() {
                 checkThermalLock();
             }
             else if (data.type === 'touch_move_sync') {
+                if (currentMode === 'maze') return;
                 partnerPointer.x = data.x; partnerPointer.y = data.y;
                 partnerPointer.active = true; partnerPointer.intensity = 1.0;
                 checkThermalLock();
             }
             else if (data.type === 'touch_leave') {
+                if (currentMode === 'maze') return;
                 if (!isLockActive) partnerPointer.intensity = 0.4;
                 checkThermalLock();
             }
             else if (data.type === 'mode_change_sync') {
-                // Чистая объединенная синхронизация режимов приложения
                 partnerPointer.currentMode = data.mode;
                 partnerModeIndicator.textContent = `[${data.mode.toUpperCase()}]`;
                 partnerModeIndicator.style.color = modeIndicatorColors[data.mode] || '#444';
@@ -1017,6 +1019,12 @@ function checkThermalLock() {
             }
             else if (data.type === 'game_spark_miss') {
                 activeSpark = null; 
+            }
+            // --- НАШЕ НОВОЕ ДОБАВЛЕНИЕ ДЛЯ ЛАБИРИНТА ---
+            else if (data.type === 'maze_start' || data.type === 'maze_player_sync' || data.type === 'maze_light_sync' || data.type === 'maze_win') {
+                if (typeof handleMazeNetwork === 'function') {
+                    handleMazeNetwork(data);
+                }
             }
         };
 
