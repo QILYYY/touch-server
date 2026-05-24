@@ -1,148 +1,250 @@
-// maze.js — Полная логика игры "Лабиринт" на клиенте
-(function() {
-    let state = {
-        active: false,
-        role: null,
-        map: [],
-        playerX: 0, playerY: 0,
-        finishX: 0, finishY: 0,
-        wallSize: 40,
-        myPointer: { x: 0, y: 0 },
-        partnerPointer: { x: 0, y: 0 }
-    };
+// Переменные состояния игры «Лабиринт»
+let mazeGame = {
+    active: false,
+    role: null,         // 'light' или 'driver'
+    map: null,          // Матрица лабиринта с сервера
+    wallSize: 40,       // Будет пересчитано динамически под экран
+    startX: 0, startY: 0,
+    finX: 0, finY: 0,
+    playerX: 0, playerY: 0,
+    lightX: 0, lightY: 0,
+    canvas: null,
+    ctx: null
+};
 
-    let canvas, ctx, animId;
+// Инициализация при загрузке скрипта
+document.addEventListener('DOMContentLoaded', () => {
+    mazeGame.canvas = document.getElementById('touch-canvas');
+    if (mazeGame.canvas) {
+        mazeGame.ctx = mazeGame.canvas.getContext('2d');
+    }
 
-    window.addEventListener('DOMContentLoaded', () => {
-        canvas = document.getElementById('gameCanvas');
-        if (!canvas) return;
-        ctx = canvas.getContext('2d');
-
-        // Клик по кнопке "Лабиринт" отправляет запрос на сервер
-        document.getElementById('btn-maze').addEventListener('click', () => {
-            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+    // Навешиваем событие на кнопку в доке
+    const mazeBtn = document.getElementById('btn-maze');
+    if (mazeBtn) {
+        mazeBtn.addEventListener('click', () => {
+            // Если игра уже идет — можно её перезапросить, иначе — шлем запрос старта на сервер
+            if (typeof sendNetData === 'function') {
+                sendNetData({ type: 'maze_start_request' });
+            } else if (window.ws && window.ws.readyState === WebSocket.OPEN) {
                 window.ws.send(JSON.stringify({ type: 'maze_start_request' }));
             }
         });
+    }
+});
 
-        // Отслеживание движений пальца
-        canvas.addEventListener('pointermove', (e) => {
-            if (!state.active) return;
-            const rect = canvas.getBoundingClientRect();
-            let x = e.clientX - rect.left;
-            let y = e.clientY - rect.top;
+// Перехват сетевых сообщений от сервера (вызывать внутри твоего ws.onmessage в index.js)
+// Или данный код зарегистрирует себя сам, если у тебя глобальный слушатель:
+function handleMazeNetwork(data) {
+    if (data.type === 'maze_start') {
+        initMazeGame(data);
+    } 
+    else if (data.type === 'maze_player_sync') {
+        mazeGame.playerX = data.x;
+        mazeGame.playerY = data.y;
+    } 
+    else if (data.type === 'maze_light_sync') {
+        mazeGame.lightX = data.x;
+        mazeGame.lightY = data.y;
+    } 
+    else if (data.type === 'maze_win') {
+        alert('Вы прошли лабиринт! 🎉');
+        stopMazeGame();
+    }
+}
 
-            state.myPointer.x = x;
-            state.myPointer.y = y;
+// Если в твоем основном скрипте index.js парсинг идет глобально, 
+// просто добавь handleMazeNetwork(data) внутрь ws.onmessage.
 
-            // Шлем данные на сервер с указанием своей роли
-            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({
-                    type: 'maze_move',
-                    role: state.role,
-                    x: x, y: y
-                }));
-            }
-        });
+function initMazeGame(data) {
+    mazeGame.active = true;
+    mazeGame.role = data.role;
+    mazeGame.map = data.map;
 
-        // Инициализируем перехватчик сообщений вебсокета
-        initSocketInterception();
-    });
+    // Снимаем класс active со всех кнопок и вешаем на Лабиринт
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    const mazeBtn = document.getElementById('btn-maze');
+    if (mazeBtn) mazeBtn.classList.add('active');
 
-    function initSocketInterception() {
-        // Проверяем наличие сокета с небольшим интервалом, если index.js грузится параллельно
-        let checkTimer = setInterval(() => {
-            if (window.ws) {
-                clearInterval(checkTimer);
-                let originalOnMessage = window.ws.onmessage;
+    // Адаптивный расчет размера ячейки под размер контейнера/экрана
+    const rows = mazeGame.map.length;
+    const cols = mazeGame.map[0].length;
+    
+    // Подгоняем wallSize, чтобы весь лабиринт гарантированно влез на экран телефона
+    const scaleX = mazeGame.canvas.clientWidth / cols;
+    const scaleY = mazeGame.canvas.clientHeight / rows;
+    mazeGame.wallSize = Math.min(scaleX, scaleY) * 0.95; // 5% запас на отступы
 
-                window.ws.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
+    // Пересчитываем серверные координаты под наше разрешение экрана
+    const serverWallSize = 40; // Коэффициент из сервера
+    const ratio = mazeGame.wallSize / serverWallSize;
 
-                    if (data.type === 'maze_start') {
-                        // Переключаем глобальный режим приложения (если используется в index.js)
-                        if (typeof window.currentMode !== 'undefined') window.currentMode = 'maze';
-                        
-                        state.active = true;
-                        state.role = data.role;
-                        state.map = data.map;
-                        state.playerX = data.startX; state.playerY = data.startY;
-                        state.finishX = data.finX; state.finishY = data.finY;
-                        
-                        if (typeof triggerHaptic === 'function') triggerHaptic('success');
-                        tick(); // Запуск цикла отрисовки
-                    }
-                    else if (data.type === 'maze_light_sync') {
-                        // Обновляем координаты чужого фонарика
-                        state.partnerPointer.x = data.x;
-                        state.partnerPointer.y = data.y;
-                    }
-                    else if (data.type === 'maze_player_sync') {
-                        // Синхронизируем положение фишки игрока от сервера
-                        state.playerX = data.x;
-                        state.playerY = data.y;
-                    }
-                    else if (data.type === 'maze_win') {
-                        state.active = false;
-                        cancelAnimationFrame(animId);
-                        if (typeof window.currentMode !== 'undefined') window.currentMode = 'idle';
-                        if (typeof triggerHaptic === 'function') triggerHaptic('success');
-                        
-                        // Рисуем экран победы
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = '#00ffcc';
-                        ctx.font = 'bold 24px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('СВЯЗЬ УСТАНОВЛЕНА! 🧡', canvas.width / 2, canvas.height / 2);
-                    }
+    mazeGame.startX = data.startX * ratio;
+    mazeGame.startY = data.startY * ratio;
+    mazeGame.finX = data.finX * ratio;
+    mazeGame.finY = data.finY * ratio;
 
-                    // Передаем управление обратно основному index.js
-                    if (originalOnMessage) originalOnMessage(event);
-                };
-            }
-        }, 100);
+    // Установка начальных позиций
+    mazeGame.playerX = mazeGame.startX;
+    mazeGame.playerY = mazeGame.startY;
+    mazeGame.lightX = mazeGame.canvas.clientWidth / 2;
+    mazeGame.lightY = mazeGame.canvas.clientHeight / 2;
+
+    // Включаем тач-трекеры
+    setupMazeControls();
+
+    // Запускаем изолированный цикл рендеринга
+    requestAnimationFrame(renderMaze);
+}
+
+function stopMazeGame() {
+    mazeGame.active = false;
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btn-tap')?.classList.add('active'); // Возврат к Искре
+}
+
+// Обработка управления (Свайпы / Перетаскивание)
+function setupMazeControls() {
+    const canvas = mazeGame.canvas;
+    
+    const handleMove = (e) => {
+        if (!mazeGame.active) return;
+        e.preventDefault();
+
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+
+        const serverWallSize = 40;
+        const ratio = mazeGame.wallSize / serverWallSize;
+
+        if (mazeGame.role === 'light') {
+            // Фонарик просто следует за пальцем
+            mazeGame.lightX = touchX;
+            mazeGame.lightY = touchY;
+            
+            sendMazeData({
+                type: 'maze_move',
+                role: 'light',
+                x: touchX,
+                y: touchY
+            });
+        } 
+        else if (mazeGame.role === 'driver') {
+            // Водитель отправляет желаемую точку на сервер для физической проверки
+            // Переводим локальные координаты обратно в серверный масштаб перед отправкой
+            sendMazeData({
+                type: 'maze_move',
+                role: 'driver',
+                x: touchX / ratio,
+                y: touchY / ratio
+            });
+        }
+    };
+
+    canvas.addEventListener('touchstart', handleMove, { passive: false });
+    canvas.addEventListener('touchmove', handleMove, { passive: false });
+}
+
+function sendMazeData(payload) {
+    if (typeof sendNetData === 'function') {
+        sendNetData(payload);
+    } else if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify(payload));
+    }
+}
+
+// Цикл отрисовки холста
+function renderMaze() {
+    if (!mazeGame.active) return;
+
+    const ctx = mazeGame.ctx;
+    const canvas = mazeGame.canvas;
+    const size = mazeGame.wallSize;
+
+    // Корректный ресайз внутреннего буфера канваса под CSS-размеры
+    if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        // Пересчитаем размеры, если экран повернулся
+        if (mazeGame.map) {
+            const scaleX = canvas.width / mazeGame.map[0].length;
+            const scaleY = canvas.height / mazeGame.map.length;
+            mazeGame.wallSize = Math.min(scaleX, scaleY) * 0.95;
+        }
     }
 
-    // Игровой цикл отрисовки
-    function tick() {
-        if (!state.active) return;
+    // 1. Очистка экрана (Черный фон лабиринта)
+    ctx.fillStyle = '#02020b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Полная темнота
-        ctx.fillStyle = '#06060c';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Центрируем лабиринт на холсте
+    const offsetX = (canvas.width - (mazeGame.map[0].length * size)) / 2;
+    const offsetY = (canvas.height - (mazeGame.map.length * size)) / 2;
 
-        // Позиция фонарика на экране зависит от роли
-        let lx = (state.role === 'light') ? state.myPointer.x : state.partnerPointer.x;
-        let ly = (state.role === 'light') ? state.myPointer.y : state.partnerPointer.y;
-
-        ctx.save();
-        // Маска светового луча фонарика
-        ctx.beginPath();
-        ctx.arc(lx, ly, 75, 0, Math.PI * 2);
-        ctx.clip();
-
-        // Отрисовка стен внутри светового пятна
-        ctx.fillStyle = '#ff9900';
-        for (let r = 0; r < state.map.length; r++) {
-            for (let c = 0; c < state.map[r].length; c++) {
-                if (state.map[r][c] === 1) {
-                    ctx.fillRect(c * state.wallSize, r * state.wallSize, state.wallSize - 1, state.wallSize - 1);
-                }
+    // 2. Рисуем стены и проходы
+    for (let r = 0; r < mazeGame.map.length; r++) {
+        for (let c = 0; c < mazeGame.map[r].length; c++) {
+            if (mazeGame.map[r][c] === 1) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.04)'; // Едва заметные контуры стен для отладки
+                ctx.fillRect(offsetX + c * size, offsetY + r * size, size, size);
             }
         }
-
-        // Выход (финиш)
-        ctx.fillStyle = '#00ffcc';
-        ctx.fillRect(state.finishX, state.finishY, state.wallSize, state.wallSize);
-        ctx.restore();
-
-        // Белая фишка игрока видна всегда и всем
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(state.playerX, state.playerY, 12, 0, Math.PI * 2);
-        ctx.fill();
-
-        animId = requestAnimationFrame(tick);
     }
-})();
+
+    // 3. Рисуем финиш (Светящаяся зона)
+    ctx.beginPath();
+    ctx.arc(offsetX + mazeGame.finX, offsetY + mazeGame.finY, size / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#00f0ff';
+    ctx.fill();
+    ctx.shadowBlur = 0; // Сброс тени
+
+    // 4. Рисуем игрока (Фишку)
+    ctx.beginPath();
+    ctx.arc(offsetX + mazeGame.playerX, offsetY + mazeGame.playerY, size / 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff3366';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ff3366';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 5. НАЛОЖЕНИЕ ТЕМНОТЫ И ЭФФЕКТА ФОНАРИКА (Маскирование)
+    // Создаем закадровый слой для маски фонаря
+    ctx.save();
+    
+    if (mazeGame.role === 'driver') {
+        // Водитель видит только там, где сейчас водит пальцем его партнер-фонарик
+        applyLightMask(ctx, offsetX + mazeGame.lightX, offsetY + mazeGame.lightY, size * 2.5);
+    } else {
+        // Фонарик видит вокруг своего собственного пальца
+        applyLightMask(ctx, offsetX + mazeGame.lightX, offsetY + mazeGame.lightY, size * 2.5);
+    }
+
+    // Отрисовываем реальные физические неоновые стены ТОЛЬКО внутри маски фонаря
+    for (let r = 0; r < mazeGame.map.length; r++) {
+        for (let c = 0; c < mazeGame.map[r].length; c++) {
+            if (mazeGame.map[r][c] === 1) {
+                ctx.fillStyle = '#151525';
+                ctx.strokeStyle = '#ff9900';
+                ctx.lineWidth = 1;
+                ctx.fillRect(offsetX + c * size, offsetY + r * size, size, size);
+                ctx.strokeRect(offsetX + c * size, offsetY + r * size, size, size);
+            }
+        }
+    }
+    ctx.restore();
+
+    // Зацикливаем анимацию
+    requestAnimationFrame(renderMaze);
+}
+
+// Функция создания конуса/круга видимости
+function applyLightMask(ctx, x, y, radius) {
+    // Временный холст-маска не нужен, используем clip
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+}
