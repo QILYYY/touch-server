@@ -303,6 +303,9 @@
         let lockInterval = null;
         let isLockActive = false;
 
+        // ⚡ СОСТОЯНИЕ МИНИ-ИГРЫ «ПОЙМАЙ ИСКРУ»
+        let activeSpark = null; // Структура: { x, y, radius: 18, status: 'idle'|'half_caught' }
+
         // Трехслойное кэширование капсул на устройстве
         let timeCapsules = JSON.parse(localStorage.getItem('touch_storage_capsules') || '[]'); 
         let pendingCapsuleCoords = { x: 0, y: 0 };
@@ -323,51 +326,44 @@
         }
 
         function triggerHaptic(type) {
-    if (!tg || !tg.HapticFeedback) return;
+            if (!tg || !tg.HapticFeedback) return;
 
-    try {
-        // Определяем, айфон ли это
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
-                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            try {
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+                              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-        if (isIOS) {
-            // --- ЛОГИКА ДЛЯ iOS (iPhone) ---
-            // iOS поддерживает абсолютно все типы из коробки и выдает идеальный Taptic-отклик
-            if (['light', 'medium', 'heavy', 'soft', 'rigid'].includes(type)) {
-                tg.HapticFeedback.impactOccurred(type);
-            } else if (['success', 'warning', 'error'].includes(type)) {
-                tg.HapticFeedback.notificationOccurred(type);
-            }
-        } else {
-            // --- ЛОГИКА ДЛЯ ANDROID И ОСТАЛЬНЫХ ---
-            // Маппим капризные soft/rigid в понятные для Android light/heavy
-            let androidType = type;
-            if (type === 'soft') androidType = 'light';
-            if (type === 'rigid') androidType = 'heavy';
+                if (isIOS) {
+                    if (['light', 'medium', 'heavy', 'soft', 'rigid'].includes(type)) {
+                        tg.HapticFeedback.impactOccurred(type);
+                    } else if (['success', 'warning', 'error'].includes(type)) {
+                        tg.HapticFeedback.notificationOccurred(type);
+                    }
+                } else {
+                    let androidType = type;
+                    if (type === 'soft') androidType = 'light';
+                    if (type === 'rigid') androidType = 'heavy';
 
-            if (['light', 'medium', 'heavy'].includes(androidType)) {
-                tg.HapticFeedback.impactOccurred(androidType);
-            } else if (['success', 'warning', 'error'].includes(androidType)) {
-                tg.HapticFeedback.notificationOccurred(androidType);
-            } else {
-                // Если передали что-то нестандартное, бьем по классике
-                tg.HapticFeedback.impactOccurred('medium');
-            }
+                    if (['light', 'medium', 'heavy'].includes(androidType)) {
+                        tg.HapticFeedback.impactOccurred(androidType);
+                    } else if (['success', 'warning', 'error'].includes(androidType)) {
+                        tg.HapticFeedback.notificationOccurred(androidType);
+                    } else {
+                        tg.HapticFeedback.impactOccurred('medium');
+                    }
 
-            // Дополнительный fallback-костыль: если на старом Android 
-            // Telegram API не достучался до вибромотора, дублируем через HTML5
-            if (navigator.vibrate) {
-                if (type === 'light' || type === 'soft') navigator.vibrate(20);
-                else if (type === 'medium') navigator.vibrate(45);
-                else if (type === 'heavy' || type === 'rigid') navigator.vibrate(75);
-                else if (type === 'success') navigator.vibrate([40, 30, 40]);
-                else if (type === 'error') navigator.vibrate([60, 50, 100]);
+                    if (navigator.vibrate) {
+                        if (type === 'light' || type === 'soft') navigator.vibrate(20);
+                        else if (type === 'medium') navigator.vibrate(45);
+                        else if (type === 'heavy' || type === 'rigid') navigator.vibrate(75);
+                        else if (type === 'success') navigator.vibrate([40, 30, 40]);
+                        else if (type === 'error') navigator.vibrate([60, 50, 100]);
+                    }
+                }
+            } catch (error) {
+                console.error("Критическая ошибка Haptic API:", error);
             }
         }
-    } catch (error) {
-        console.error("Критическая ошибка Haptic API:", error);
-    }
-}
+
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -406,10 +402,7 @@
 
         function handleCapsuleSave() {
             let text = capsuleText.value.trim();
-            if (!text) {
-                alert('Введите текст сообщения!');
-                return;
-            }
+            if (!text) { alert('Введите текст сообщения!'); return; }
             
             let newCapsule = { 
                 x: Math.round(pendingCapsuleCoords.x), 
@@ -418,14 +411,12 @@
             };
             
             sendNetData({ type: 'create_capsule', capsule: newCapsule });
-            
             timeCapsules.push(newCapsule);
             localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
             
             capsuleModal.style.display = 'none';
             isSelectingCapsuleLocation = false;
             capsuleBanner.classList.remove('show');
-            
             triggerHaptic('success');
         }
 
@@ -443,11 +434,8 @@
         
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
             roomInput.value = decodeURIComponent(tg.initDataUnsafe.start_param);
-            if (ws.readyState === WebSocket.OPEN) {
-                startApp(roomInput.value.trim());
-            } else {
-                ws.addEventListener('open', () => startApp(roomInput.value.trim()));
-            }
+            if (ws.readyState === WebSocket.OPEN) { startApp(roomInput.value.trim()); } 
+            else { ws.addEventListener('open', () => startApp(roomInput.value.trim())); }
         } else {
             const savedRoom = localStorage.getItem('tg_room_code_v7.3');
             if (savedRoom) roomInput.value = savedRoom;
@@ -467,6 +455,16 @@
             }
             pairingScreen.style.display = 'none';
             resizeCanvas();
+
+            // ⚡ Интервальный триггер генерации искр
+            setInterval(() => {
+                // Генерируем искру только если на экране пусто и рандом дал добро
+                if (!activeSpark && Math.random() > 0.45) {
+                    let randX = Math.floor(Math.random() * (canvas.width - 60)) + 30;
+                    let randY = Math.floor(Math.random() * (canvas.height - 120)) + 60;
+                    sendNetData({ type: 'game_spawn_spark', x: randX, y: randY });
+                }
+            }, 7000);
         }
 
         function changeTheme(themeName, sendNet = false) {
@@ -507,25 +505,52 @@
                 else if (this.type === 'draw') { this.size = Math.random() * 4 + 4; this.speedX = (Math.random() - 0.5) * 0.8; this.speedY = (Math.random() - 0.5) * 0.8; this.decay = 0.03; this.color = '#b5179e'; }
                 else if (this.type === 'lock_fire') { this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 4; this.speedY = (Math.random() - 0.5) * 4; this.decay = 0.02; this.color = Math.random() > 0.5 ? '#b5179e' : '#ff3366'; }
                 else if (this.type === 'catch_sparks') { this.size = Math.random() * 3 + 4; this.speedX = (Math.random() - 0.5) * 8; this.speedY = (Math.random() - 0.5) * 8; this.decay = 0.015; this.color = '#00f0ff'; }
+                // Эффект взрыва при успешной поимке искры парами
+                else if (this.type === 'game_win') { this.size = Math.random() * 4 + 5; this.speedX = (Math.random() - 0.5) * 11; this.speedY = (Math.random() - 0.5) * 11; this.decay = 0.012; this.color = '#ffbe0b'; }
                 else if (this.type === 'emoji') { this.size = Math.random() * 12 + 14; this.speedX = (Math.random() - 0.5) * 6; this.speedY = (Math.random() - 0.5) * 6; this.decay = 0.012; }
             }
             update() { this.x += this.speedX; this.y += this.speedY; this.alpha -= this.decay; if (this.type === 'heartbeat') this.size += 0.2; }
             draw() {
                 ctx.save(); ctx.globalAlpha = this.alpha;
                 if (this.type === 'emoji') { ctx.font = `${this.size}px serif`; ctx.translate(this.x, this.y); ctx.rotate(this.rotation); ctx.fillText(this.char, -this.size/2, this.size/2); } 
-                else if (this.type === 'kiss') { ctx.fillStyle = this.color; ctx.translate(this.x, this.y); ctx.rotate(this.rotation * 0.1); ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-this.size/2, -this.size/2, -this.size, this.size/3, 0, this.size); ctx.bezierCurveTo(this.size, this.size/3, this.size/2, -this.size/2, 0, 0); ctx.fill(); }
+                else if (this.type === 'kiss') { ctx.fillStyle = this.color; ctx.translate(this.x, this.y); ctx.rotate(this.rotation * 0.1); ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-this.size/2, -this.size/2, -this.size, this.size/3, 0, this.size); ctx.bezierCurveTo(this.size, this.size/3, this.size/2, -this.section / 2, 0, 0); ctx.bezierCurveTo(this.size, this.size/3, this.size/2, -this.size/2, 0, 0); ctx.fill(); }
                 else { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
                 ctx.restore();
             }
         }
 
         function createParticlesEffect(x, y, type, char = '') {
-            let count = type === 'draw' ? 2 : (type === 'lock_fire' ? 6 : (type === 'catch_sparks' ? 20 : 12));
+            let count = type === 'draw' ? 2 : (type === 'lock_fire' ? 6 : (type === 'catch_sparks' ? 20 : (type === 'game_win' ? 35 : 12)));
             for (let i = 0; i < count; i++) { particles.push(new Particle(x, y, type, char)); }
         }
 
         function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // ⚡ ОТРИСОВКА АКТИВНОЙ ИГРОВОЙ ИСКРЫ
+            if (activeSpark) {
+                ctx.save();
+                let pulse = Math.sin(Date.now() * 0.008) * 4;
+                let currentRadius = activeSpark.radius + pulse;
+                
+                let glowGrad = ctx.createRadialGradient(activeSpark.x, activeSpark.y, 2, activeSpark.x, activeSpark.y, currentRadius * 2.5);
+                if (activeSpark.status === 'half_caught') {
+                    glowGrad.addColorStop(0, 'rgba(255, 190, 11, 0.6)');
+                    glowGrad.addColorStop(0.5, 'rgba(255, 0, 110, 0.2)');
+                    ctx.strokeStyle = '#ff006e'; ctx.lineWidth = 2; ctx.setLineDash([4, 2]);
+                    ctx.beginPath(); ctx.arc(activeSpark.x, activeSpark.y, currentRadius + 10, 0, Math.PI * 2); ctx.stroke();
+                } else {
+                    glowGrad.addColorStop(0, 'rgba(0, 240, 255, 0.5)');
+                    glowGrad.addColorStop(0.6, 'rgba(0, 180, 216, 0.15)');
+                }
+                glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = glowGrad;
+                ctx.beginPath(); ctx.arc(activeSpark.x, activeSpark.y, currentRadius * 2.5, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = activeSpark.status === 'half_caught' ? '#ffbe0b' : '#ffffff';
+                ctx.beginPath(); ctx.arc(activeSpark.x, activeSpark.y, currentRadius * 0.6, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
 
             timeCapsules.forEach(capsule => {
                 ctx.save();
@@ -600,37 +625,35 @@
             }
         }
 
-function executeAction(x, y, isPartner = false, modeToUse = null) {
-    let activeMode = modeToUse || currentMode;
-    
-    if (activeMode === 'tap') {
-        createParticlesEffect(x, y, 'tap');
-        if (!isPartner) {
-            triggerHaptic('medium');
-            sendNetData({ type: 'touch', pattern: 'tap', x: x, y: y });
+        function executeAction(x, y, isPartner = false, modeToUse = null) {
+            let activeMode = modeToUse || currentMode;
+            
+            if (activeMode === 'tap') {
+                createParticlesEffect(x, y, 'tap');
+                if (!isPartner) {
+                    triggerHaptic('medium');
+                    sendNetData({ type: 'touch', pattern: 'tap', x: x, y: y });
+                }
+            } else if (activeMode === 'heartbeat') {
+                createParticlesEffect(x, y, 'heartbeat');
+                if (!isPartner) {
+                    triggerHaptic('heavy');
+                    sendNetData({ type: 'touch', pattern: 'heartbeat', x: x, y: y });
+                }
+            } else if (activeMode === 'kiss') {
+                createParticlesEffect(x, y, 'kiss');
+                if (!isPartner) {
+                    triggerHaptic('rigid');
+                    sendNetData({ type: 'touch', pattern: 'kiss', x: x, y: y });
+                }
+            } 
+            else if (activeMode === 'draw') {
+                createParticlesEffect(x, y, 'draw');
+                if (isPartner) {
+                    triggerHaptic('light'); 
+                }
+            }
         }
-    } else if (activeMode === 'heartbeat') {
-        createParticlesEffect(x, y, 'heartbeat');
-        if (!isPartner) {
-            triggerHaptic('heavy');
-            sendNetData({ type: 'touch', pattern: 'heartbeat', x: x, y: y });
-        }
-    } else if (activeMode === 'kiss') {
-        createParticlesEffect(x, y, 'kiss');
-        if (!isPartner) {
-            triggerHaptic('rigid');
-            sendNetData({ type: 'touch', pattern: 'kiss', x: x, y: y });
-        }
-    } 
-    // ✨ ДОБАВЛЕННЫЙ БЛОК ДЛЯ СИНХРОНИЗАЦИИ РИСОВАНИЯ:
-    else if (activeMode === 'draw') {
-        createParticlesEffect(x, y, 'draw');
-        // Если это рисует партнёр, можно добавить лёгкое вибро, чтобы телефон «зудел» при рисовании
-        if (isPartner) {
-            triggerHaptic('light'); 
-        }
-    }
-}
 
         canvas.addEventListener('pointerdown', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -650,6 +673,16 @@ function executeAction(x, y, isPartner = false, modeToUse = null) {
 
             myPointer.x = clickedX; myPointer.y = clickedY;
             myPointer.active = true;
+
+            // ⚡ ПРОВЕРКА ПОПАДАНИЯ ПО ИГРОВОЙ ИСКРЕ
+            if (activeSpark) {
+                let distToSpark = Math.sqrt(Math.pow(activeSpark.x - clickedX, 2) + Math.pow(activeSpark.y - clickedY, 2));
+                if (distToSpark < activeSpark.radius + 20) { // Даем небольшой зазор на неточные клики пальцем
+                    sendNetData({ type: 'game_click_spark', x: activeSpark.x, y: activeSpark.y });
+                    triggerHaptic('medium');
+                    return; // Важно: предотвращаем запуск стандартного тапа поверх искры
+                }
+            }
 
             let clickedCapsuleIndex = timeCapsules.findIndex(c => {
                 return Math.sqrt(Math.pow(c.x - myPointer.x, 2) + Math.pow(c.y - myPointer.y, 2)) < 25;
@@ -794,6 +827,29 @@ function executeAction(x, y, isPartner = false, modeToUse = null) {
             else if (data.type === 'capsule_read') {
                 timeCapsules = timeCapsules.filter(c => !(c.x === data.x && c.y === data.y));
                 localStorage.setItem('touch_storage_capsules', JSON.stringify(timeCapsules));
+            }
+            
+            // ⚡ ОБРАБОТКА ИГРОВЫХ ПАКЕТОВ С СЕРВЕРА
+            else if (data.type === 'game_spawn_spark') {
+                activeSpark = { x: data.x, y: data.y, radius: 18, status: 'idle' };
+            }
+            else if (data.type === 'game_spark_half') {
+                if (activeSpark) {
+                    activeSpark.status = 'half_caught';
+                    triggerHaptic('heavy'); // Сигнализируем, что таймер 600мс пошёл!
+                }
+            }
+            else if (data.type === 'game_spark_win') {
+                if (activeSpark) {
+                    createParticlesEffect(activeSpark.x, activeSpark.y, 'game_win');
+                    triggerHaptic('success');
+                    comboScore += 25; // Обещанный щедрый бонус в комбо
+                    updateScoreUI();
+                    activeSpark = null;
+                }
+            }
+            else if (data.type === 'game_spark_miss') {
+                activeSpark = null; // Удаляем искру, если время вышло
             }
         };
 
