@@ -14,7 +14,7 @@ wss.on('connection', (ws) => {
         // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         if (data.type === 'join') {
             currentRoom = data.room;
-            ws.userId = data.userId; // Привязываем userId к сокету для индентификации в играх
+            ws.userId = data.userId; // Привязываем userId к сокету для идентификации в играх
             
             if (!rooms[currentRoom]) {
                 rooms[currentRoom] = {
@@ -25,9 +25,11 @@ wss.on('connection', (ws) => {
                     sparkStatus: null, 
                     sparkTimer: null,  
                     missTimer: null,
-                    // ✨ Игровое состояние для «Крестиков-Ноликов»
+                    // Игровое состояние для «Крестиков-Ноликов»
                     tttBoard: Array(9).fill(null),
-                    tttPlayers: {} // Хранилище ролей вида { userId: 'X' }
+                    tttPlayers: {}, // Хранилище ролей вида { userId: 'X' }
+                    // 🔦 Игровое состояние для «Лабиринта»
+                    mazeState: null
                 };
             }
             
@@ -123,7 +125,7 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // ✨ 7. КРЕСТblockИКИ-НОЛИКИ: ИНИЦИАЛИЗАЦИЯ И СБРОС ИГРЫ
+        // 7. КРЕСТИКИ-НОЛИКИ: ИНИЦИАЛИЗАЦИЯ И СБРОС ИГРЫ
         else if (data.type === 'ttt_init') {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
@@ -138,7 +140,7 @@ wss.on('connection', (ws) => {
                     room.tttPlayers[room.users[1].userId] = 'O';
                 }
 
-                // Крестики всегда начинают первыми
+                // ... Начинаем игру ...
                 room.users.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         const playerRole = room.tttPlayers[client.userId] || 'O';
@@ -153,26 +155,22 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // ✨ 8. КРЕСТИКИ-НОЛИКИ: ОБРАБОТКА ХОДА
+        // 8. КРЕСТИКИ-НОЛИКИ: ОБРАБОТКА ХОДА
         else if (data.type === 'ttt_move') {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
                 const cellIndex = data.index;
                 const playerRole = room.tttPlayers[ws.userId];
 
-                // Валидация: ячейка пуста и у игрока есть назначенная роль
                 if (playerRole && room.tttBoard[cellIndex] === null) {
                     room.tttBoard[cellIndex] = playerRole;
 
                     const winner = checkTTTWinner(room.tttBoard);
                     const isDraw = !room.tttBoard.includes(null) && !winner;
 
-                    // Рассылаем обновление состояния каждому клиенту индивидуально
                     room.users.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
                             const clientRole = room.tttPlayers[client.userId];
-                            
-                            // Ход переходит к сопернику, если игра продолжается
                             const nextTurnRole = playerRole === 'X' ? 'O' : 'X';
                             const isMyTurn = clientRole === nextTurnRole && !winner && !isDraw;
 
@@ -180,7 +178,7 @@ wss.on('connection', (ws) => {
                                 type: 'ttt_update',
                                 board: room.tttBoard,
                                 isMyTurn: isMyTurn,
-                                winner: winner, // 'X', 'O' или null
+                                winner: winner,
                                 isDraw: isDraw
                             }));
                         }
@@ -189,7 +187,83 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // 9. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, рисование)
+        // 🔦 9. ЛАБИРИНТ: ИНИЦИАЛИЗАЦИЯ И СБРОС ИГРЫ
+        else if (data.type === 'maze_start_request') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+                if (room.users.length < 2) return; // Нужна пара для игры
+
+                // Генерируем честный лабиринт (9x13)
+                const mazeMap = generateServerMaze(9, 13);
+                
+                room.mazeState = {
+                    map: mazeMap,
+                    wallSize: 40,
+                    startX: 60, startY: 60,
+                    finX: 260, finY: 420,
+                    playerX: 60, playerY: 60
+                };
+
+                // Рандомим роли
+                const isFirstLight = Math.random() < 0.5;
+
+                room.users[0].send(JSON.stringify({
+                    type: 'maze_start',
+                    role: isFirstLight ? 'light' : 'driver',
+                    map: mazeMap,
+                    startX: room.mazeState.startX, startY: room.mazeState.startY,
+                    finX: room.mazeState.finX, finY: room.mazeState.finY
+                }));
+
+                if (room.users[1]) {
+                    room.users[1].send(JSON.stringify({
+                        type: 'maze_start',
+                        role: isFirstLight ? 'driver' : 'light',
+                        map: mazeMap,
+                        startX: room.mazeState.startX, startY: room.mazeState.startY,
+                        finX: room.mazeState.finX, finY: room.mazeState.finY
+                    }));
+                }
+            }
+        }
+
+        // 🔦 10. ЛАБИРИНТ: СИНХРОНИЗАЦИЯ ДВИЖЕНИЙ И ФИЗИКА
+        else if (data.type === 'maze_move') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+                if (!room.mazeState) return;
+
+                if (data.role === 'light') {
+                    // Пересылаем координаты фонарика партнеру без валидации
+                    broadcast(currentRoom, { type: 'maze_light_sync', x: data.x, y: data.y }, ws);
+                } 
+                else if (data.role === 'driver') {
+                    // Валидация перемещения фишки на сервере
+                    if (!checkServerCollision(data.x, data.y, room.mazeState)) {
+                        room.mazeState.playerX = data.x;
+                        room.mazeState.playerY = data.y;
+
+                        // Если стена не задета, рассылаем новые координаты обоим юзерам
+                        room.users.forEach(client => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                client.send(JSON.stringify({ type: 'maze_player_sync', x: data.x, y: data.y }));
+                            }
+                        });
+
+                        // Проверяем триггер триумфального финиша
+                        let dist = Math.sqrt(Math.pow(data.x - room.mazeState.finX, 2) + Math.pow(data.y - room.mazeState.finY, 2));
+                        if (dist < 25) {
+                            room.mazeState = null; // Сбрасываем стейт игры
+                            broadcast(currentRoom, { type: 'maze_win' });
+                            // Шлем победу в том числе и инициатору, так как широковещатель его игнорирует
+                            ws.send(JSON.stringify({ type: 'maze_win' }));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 11. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, рисование)
         else {
             if (currentRoom) {
                 broadcast(currentRoom, data, ws);
@@ -217,12 +291,14 @@ wss.on('connection', (ws) => {
     });
 });
 
-// ✨ Алгоритм проверки победных комбинаций
+// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+
+// Алгоритм проверки победных комбинаций крестиков-ноликов
 function checkTTTWinner(board) {
     const lines = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Горизонтали
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Вертикали
-        [0, 4, 8], [2, 4, 6]             // Диагонали
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
     for (let i = 0; i < lines.length; i++) {
         const [a, b, c] = lines[i];
@@ -231,6 +307,39 @@ function checkTTTWinner(board) {
         }
     }
     return null;
+}
+
+// Генератор честных лабиринтов (глубокий DFS обход)
+function generateServerMaze(cols, rows) {
+    let maze = Array(rows).fill().map(() => Array(cols).fill(1));
+    
+    function carve(r, c) {
+        maze[r][c] = 0;
+        let dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
+        
+        for (let [dr, dc] of dirs) {
+            let nr = r + dr, nc = c + dc;
+            if (nr > 0 && nr < rows-1 && nc > 0 && nc < cols-1 && maze[nr][nc] === 1) {
+                maze[r + dr/2][c + dc/2] = 0;
+                carve(nr, nc);
+            }
+        }
+    }
+    carve(1, 1);
+    
+    // Чистим спавн-зоны по углам от возможных косяков генерации
+    maze[1][1] = 0; maze[1][2] = 0; maze[2][1] = 0;
+    maze[rows-2][cols-2] = 0;
+    maze[rows-2][cols-3] = 0;
+    return maze;
+}
+
+// Серверная валидация столкновения фишки водителя со стеной
+function checkServerCollision(x, y, state) {
+    let cellX = Math.floor(x / state.wallSize);
+    let cellY = Math.floor(y / state.wallSize);
+    if (state.map[cellY] && state.map[cellY][cellX] === 1) return true;
+    return false;
 }
 
 function broadcast(roomName, data, senderWs = null) {
