@@ -19,7 +19,11 @@ wss.on('connection', (ws) => {
                 rooms[currentRoom] = {
                     users: [],
                     capsules: [],
-                    moods: {} // Хранилище настроений внутри конкретной комнаты
+                    moods: {},
+                    // ✨ Игровое состояние для «Поймай искру» внутри конкретной комнаты
+                    sparkStatus: null, // 'half' или null
+                    sparkTimer: null,  // Ссылка на активный таймаут
+                    missTimer: null    // Ссылка на таймаут исчезновения
                 };
             }
             
@@ -47,10 +51,7 @@ wss.on('connection', (ws) => {
         // 2. ОБРАБОТКА СТАТУСА НАСТРОЕНИЯ
         else if (data.type === 'sync_mood_status') {
             if (currentRoom && rooms[currentRoom]) {
-                // Сохраняем настроение пользователя в объект комнаты
                 rooms[currentRoom].moods[data.userId] = data.status;
-                
-                // Транслируем изменение партнёру (исключая отправителя через ws)
                 broadcast(currentRoom, data, ws);
             }
         }
@@ -73,7 +74,64 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // 5. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения)
+        // ✨ 5. МИНИ-ИГРА: СПАВН ИСКРЫ
+        else if (data.type === 'game_spawn_spark') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+
+                // Сбрасываем старые таймеры этой комнаты, если они были активны
+                clearTimeout(room.sparkTimer);
+                clearTimeout(room.missTimer);
+                room.sparkStatus = null;
+
+                // Рассылаем координаты новой искры ВСЕМ игрокам в комнате (включая отправителя)
+                broadcast(currentRoom, { type: 'game_spawn_spark', x: data.x, y: data.y });
+
+                // Если за 4 секунды никто не нажал — гасим искру
+                room.missTimer = setTimeout(() => {
+                    if (rooms[currentRoom]) {
+                        rooms[currentRoom].sparkStatus = null;
+                        broadcast(currentRoom, { type: 'game_spark_miss' });
+                    }
+                }, 4000);
+            }
+        }
+
+        // ✨ 6. МИНИ-ИГРА: НАЖАТИЕ НА ИСКРУ
+        else if (data.type === 'game_click_spark') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+
+                if (!room.sparkStatus) {
+                    // Первый игрок поймал искру. Переводим комнату в статус 'half'
+                    room.sparkStatus = 'half';
+                    
+                    // Отменяем таймер исчезновения (missTimer)
+                    clearTimeout(room.missTimer);
+
+                    // Оповещаем всех, что искра зафиксирована наполовину
+                    broadcast(currentRoom, { type: 'game_spark_half' });
+
+                    // Даем ровно 600 миллисекунд второму игроку, чтобы нажать
+                    room.sparkTimer = setTimeout(() => {
+                        if (rooms[currentRoom]) {
+                            rooms[currentRoom].sparkStatus = null;
+                            broadcast(currentRoom, { type: 'game_spark_miss' });
+                        }
+                    }, 600);
+
+                } else if (room.sparkStatus === 'half') {
+                    // Победили! Второй игрок успел нажать в окно 600мс
+                    clearTimeout(room.sparkTimer);
+                    room.sparkStatus = null;
+
+                    // Отправляем пакет победы ВСЕМ в комнате
+                    broadcast(currentRoom, { type: 'game_spark_win' });
+                }
+            }
+        }
+
+        // 7. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, рисовашки)
         else {
             if (currentRoom) {
                 broadcast(currentRoom, data, ws);
@@ -83,15 +141,18 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         if (currentRoom && rooms[currentRoom]) {
-            rooms[currentRoom].users = rooms[currentRoom].users.filter(u => u !== ws);
+            const room = rooms[currentRoom];
+            room.users = room.users.filter(u => u !== ws);
             
             broadcast(currentRoom, {
                 type: 'system_status',
-                text: `Пользователей в комнате: ${rooms[currentRoom].users.length}`
+                text: `Пользователей в комнате: ${room.users.length}`
             });
 
-            // Если комната пуста — очищаем память
-            if (rooms[currentRoom].users.length === 0 && rooms[currentRoom].capsules.length === 0) {
+            // Если комната опустела — очищаем память и таймеры игры
+            if (room.users.length === 0 && room.capsules.length === 0) {
+                clearTimeout(room.sparkTimer);
+                clearTimeout(room.missTimer);
                 delete rooms[currentRoom];
             }
         }
