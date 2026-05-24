@@ -14,16 +14,20 @@ wss.on('connection', (ws) => {
         // 1. ЛОГИКА ПОДКЛЮЧЕНИЯ К КОМНАТЕ
         if (data.type === 'join') {
             currentRoom = data.room;
+            ws.userId = data.userId; // Привязываем userId к сокету для индентификации в играх
             
             if (!rooms[currentRoom]) {
                 rooms[currentRoom] = {
                     users: [],
                     capsules: [],
                     moods: {},
-                    // ✨ Игровое состояние для «Поймай искру» внутри конкретной комнаты
-                    sparkStatus: null, // 'half' или null
-                    sparkTimer: null,  // Ссылка на активный таймаут
-                    missTimer: null    // Ссылка на таймаут исчезновения
+                    // Игровое состояние для «Поймай искру»
+                    sparkStatus: null, 
+                    sparkTimer: null,  
+                    missTimer: null,
+                    // ✨ Игровое состояние для «Крестиков-Ноликов»
+                    tttBoard: Array(9).fill(null),
+                    tttPlayers: {} // Хранилище ролей вида { userId: 'X' }
                 };
             }
             
@@ -74,20 +78,17 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // ✨ 5. МИНИ-ИГРА: СПАВН ИСКРЫ
+        // 5. МИНИ-ИГРА: СПАВН ИСКРЫ
         else if (data.type === 'game_spawn_spark') {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
 
-                // Сбрасываем старые таймеры этой комнаты, если они были активны
                 clearTimeout(room.sparkTimer);
                 clearTimeout(room.missTimer);
                 room.sparkStatus = null;
 
-                // Рассылаем координаты новой искры ВСЕМ игрокам в комнате (включая отправителя)
                 broadcast(currentRoom, { type: 'game_spawn_spark', x: data.x, y: data.y });
 
-                // Если за 4 секунды никто не нажал — гасим искру
                 room.missTimer = setTimeout(() => {
                     if (rooms[currentRoom]) {
                         rooms[currentRoom].sparkStatus = null;
@@ -97,22 +98,16 @@ wss.on('connection', (ws) => {
             }
         }
 
-        // ✨ 6. МИНИ-ИГРА: НАЖАТИЕ НА ИСКРУ
+        // 6. МИНИ-ИГРА: НАЖАТИЕ НА ИСКРУ
         else if (data.type === 'game_click_spark') {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
 
                 if (!room.sparkStatus) {
-                    // Первый игрок поймал искру. Переводим комнату в статус 'half'
                     room.sparkStatus = 'half';
-                    
-                    // Отменяем таймер исчезновения (missTimer)
                     clearTimeout(room.missTimer);
-
-                    // Оповещаем всех, что искра зафиксирована наполовину
                     broadcast(currentRoom, { type: 'game_spark_half' });
 
-                    // Даем ровно 600 миллисекунд второму игроку, чтобы нажать
                     room.sparkTimer = setTimeout(() => {
                         if (rooms[currentRoom]) {
                             rooms[currentRoom].sparkStatus = null;
@@ -121,17 +116,80 @@ wss.on('connection', (ws) => {
                     }, 600);
 
                 } else if (room.sparkStatus === 'half') {
-                    // Победили! Второй игрок успел нажать в окно 600мс
                     clearTimeout(room.sparkTimer);
                     room.sparkStatus = null;
-
-                    // Отправляем пакет победы ВСЕМ в комнате
                     broadcast(currentRoom, { type: 'game_spark_win' });
                 }
             }
         }
 
-        // 7. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, рисовашки)
+        // ✨ 7. КРЕСТblockИКИ-НОЛИКИ: ИНИЦИАЛИЗАЦИЯ И СБРОС ИГРЫ
+        else if (data.type === 'ttt_init') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+                room.tttBoard = Array(9).fill(null);
+                room.tttPlayers = {};
+
+                // Распределяем роли между первыми двумя игроками в комнате
+                if (room.users[0] && room.users[0].userId) {
+                    room.tttPlayers[room.users[0].userId] = 'X';
+                }
+                if (room.users[1] && room.users[1].userId) {
+                    room.tttPlayers[room.users[1].userId] = 'O';
+                }
+
+                // Крестики всегда начинают первыми
+                room.users.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        const playerRole = room.tttPlayers[client.userId] || 'O';
+                        client.send(JSON.stringify({
+                            type: 'ttt_start',
+                            board: room.tttBoard,
+                            role: playerRole,
+                            isMyTurn: playerRole === 'X'
+                        }));
+                    }
+                });
+            }
+        }
+
+        // ✨ 8. КРЕСТИКИ-НОЛИКИ: ОБРАБОТКА ХОДА
+        else if (data.type === 'ttt_move') {
+            if (currentRoom && rooms[currentRoom]) {
+                const room = rooms[currentRoom];
+                const cellIndex = data.index;
+                const playerRole = room.tttPlayers[ws.userId];
+
+                // Валидация: ячейка пуста и у игрока есть назначенная роль
+                if (playerRole && room.tttBoard[cellIndex] === null) {
+                    room.tttBoard[cellIndex] = playerRole;
+
+                    const winner = checkTTTWinner(room.tttBoard);
+                    const isDraw = !room.tttBoard.includes(null) && !winner;
+
+                    // Рассылаем обновление состояния каждому клиенту индивидуально
+                    room.users.forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            const clientRole = room.tttPlayers[client.userId];
+                            
+                            // Ход переходит к сопернику, если игра продолжается
+                            const nextTurnRole = playerRole === 'X' ? 'O' : 'X';
+                            const isMyTurn = clientRole === nextTurnRole && !winner && !isDraw;
+
+                            client.send(JSON.stringify({
+                                type: 'ttt_update',
+                                board: room.tttBoard,
+                                isMyTurn: isMyTurn,
+                                winner: winner, // 'X', 'O' или null
+                                isDraw: isDraw
+                            }));
+                        }
+                    });
+                }
+            }
+        }
+
+        // 9. ВСЕ ОСТАЛЬНЫЕ СИНХРОННЫЕ ДЕЙСТВИЯ (клики, движения, рисование)
         else {
             if (currentRoom) {
                 broadcast(currentRoom, data, ws);
@@ -149,7 +207,7 @@ wss.on('connection', (ws) => {
                 text: `Пользователей в комнате: ${room.users.length}`
             });
 
-            // Если комната опустела — очищаем память и таймеры игры
+            // Если комната опустела — очищаем память и таймеры
             if (room.users.length === 0 && room.capsules.length === 0) {
                 clearTimeout(room.sparkTimer);
                 clearTimeout(room.missTimer);
@@ -158,6 +216,22 @@ wss.on('connection', (ws) => {
         }
     });
 });
+
+// ✨ Алгоритм проверки победных комбинаций
+function checkTTTWinner(board) {
+    const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Горизонтали
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Вертикали
+        [0, 4, 8], [2, 4, 6]             // Диагонали
+    ];
+    for (let i = 0; i < lines.length; i++) {
+        const [a, b, c] = lines[i];
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            return board[a];
+        }
+    }
+    return null;
+}
 
 function broadcast(roomName, data, senderWs = null) {
     if (!rooms[roomName]) return;
