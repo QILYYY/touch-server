@@ -223,6 +223,10 @@
         <span class="icon">❌⭕️</span>
         <span>Крестики нолики</span>
         </button>
+        <button onclick="sendNetData({type: 'maze_start_request', map: generateMazeMap()})">
+     <span class="icon">🔦</span>
+                        <span>Лабиринт</span>
+</button>
     </div>
 
     <div id="native-menu-overlay">
@@ -1041,5 +1045,6 @@ function checkThermalLock() {
             });
         });
     </script>
+    <script src="maze.js"></script>
 </body>
 </html>
