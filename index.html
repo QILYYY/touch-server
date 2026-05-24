@@ -306,6 +306,17 @@
         // ⚡ СОСТОЯНИЕ МИНИ-ИГРЫ «ПОЙМАЙ ИСКРУ»
         let activeSpark = null; // Структура: { x, y, radius: 18, status: 'idle'|'half_caught' }
 
+        let tttState = {
+    active: false,
+    board: Array(9).fill(null),
+    myRole: 'X',       // 'X' или 'O'
+    isMyTurn: false,
+    gridSize: 0,       // Рассчитаем динамически под размер экрана
+    startX: 0,
+    startY: 0,
+    gameStatusText: '' // "Твой ход", "Ждем партнера", "Победа!"
+};
+
         // Трехслойное кэширование капсул на устройстве
         let timeCapsules = JSON.parse(localStorage.getItem('touch_storage_capsules') || '[]'); 
         let pendingCapsuleCoords = { x: 0, y: 0 };
@@ -315,6 +326,8 @@
             tap: "rgba(0, 180, 216, 0.08)", heartbeat: "rgba(255, 77, 109, 0.08)",
             kiss: "rgba(255, 117, 143, 0.12)", draw: "rgba(114, 9, 183, 0.06)",
             lock: "rgba(114, 9, 183, 0.25)", clear: "transparent"
+            fluidColors.tic_tac_toe = "rgba(255, 190, 11, 0.05)";
+            modeIndicatorColors.tic_tac_toe = '#ffbe0b';
         };
 
         const modeIndicatorColors = { tap: '#00b4d8', heartbeat: '#ff3366', kiss: '#ff758f', draw: '#b5179e' };
@@ -364,16 +377,24 @@
             }
         }
 
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentMode = btn.dataset.mode;
-                triggerFluidBackground(currentMode);
-                sendNetData({ type: 'mode_change_sync', mode: currentMode });
-                triggerHaptic('light');
-            });
-        });
+       document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        triggerFluidBackground(currentMode);
+        sendNetData({ type: 'mode_change_sync', mode: currentMode });
+        triggerHaptic('light');
+
+        // ✨ Если выбрали крестики-нолики — шлем запрос на старт сессии
+        if (currentMode === 'tic_tac_toe') {
+            tttState.active = true;
+            sendNetData({ type: 'ttt_init' });
+        } else {
+            tttState.active = false;
+        }
+    });
+});
 
         openMenuBtn.addEventListener('click', () => {
             menuOverlay.style.display = 'flex';
@@ -424,9 +445,14 @@
         saveCapsuleBtn.addEventListener('click', (e) => { e.stopPropagation(); });
 
         function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-        }
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    
+    // Сетка будет занимать 80% от ширины экрана, но не больше 320px
+    tttState.gridSize = Math.min(canvas.width * 0.8, 320);
+    tttState.startX = (canvas.width - tttState.gridSize) / 2;
+    tttState.startY = (canvas.height - tttState.gridSize) / 2;
+}
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
@@ -527,6 +553,66 @@
         function renderLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            if (currentMode === 'tic_tac_toe') {
+    ctx.save();
+    // Рисуем сетку
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    let step = tttState.gridSize / 3;
+
+    // Вертикальные линии
+    for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(tttState.startX + step * i, tttState.startY);
+        ctx.lineTo(tttState.startX + step * i, tttState.startY + tttState.gridSize);
+        ctx.stroke();
+    }
+    // Горизонтальные линии
+    for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(tttState.startX, tttState.startY + step * i);
+        ctx.lineTo(tttState.startX + tttState.gridSize, tttState.startY + step * i);
+        ctx.stroke();
+    }
+
+    // Рисуем крестики и нолики
+    tttState.board.forEach((cell, idx) => {
+        if (!cell) return;
+        let row = Math.floor(idx / 3);
+        let col = idx % 3;
+        let cellX = tttState.startX + col * step + step / 2;
+        let cellY = tttState.startY + row * step + step / 2;
+        let size = step * 0.25;
+
+        if (cell === 'X') {
+            ctx.strokeStyle = '#ff006e';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ff006e';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(cellX - size, cellY - size); ctx.lineTo(cellX + size, cellY + size);
+            ctx.moveTo(cellX + size, cellY - size); ctx.lineTo(cellX - size, cellY + size);
+            ctx.stroke();
+        } else if (cell === 'O') {
+            ctx.strokeStyle = '#00f0ff';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00f0ff';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(cellX, cellY, size, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    });
+
+    // Вывод статуса игры текстом на холсте
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(tttState.gameStatusText, canvas.width / 2, tttState.startY - 25);
+    ctx.restore();
+}
+            
             // ⚡ ОТРИСОВКА АКТИВНОЙ ИГРОВОЙ ИСКРЫ
             if (activeSpark) {
                 ctx.save();
@@ -717,6 +803,28 @@
         });
 
         canvas.addEventListener('pointermove', (e) => {
+            if (currentMode === 'tic_tac_toe') {
+    // Проверяем, попал ли клик внутрь игровой сетки
+    if (clickedX >= tttState.startX && clickedX <= tttState.startX + tttState.gridSize &&
+        clickedY >= tttState.startY && clickedY <= tttState.startY + tttState.gridSize) {
+        
+        if (!tttState.isMyTurn) {
+            triggerHaptic('error');
+            return;
+        }
+
+        let step = tttState.gridSize / 3;
+        let col = Math.floor((clickedX - tttState.startX) / step);
+        let row = Math.floor((clickedY - tttState.startY) / step);
+        let cellIndex = row * 3 + col;
+
+        if (tttState.board[cellIndex] === null) {
+            triggerHaptic('medium');
+            sendNetData({ type: 'ttt_move', index: cellIndex });
+        }
+        return; // Прерываем выполнение обычных тапов/эффектов
+    }
+}
             if (!myPointer.active) return;
             const rect = canvas.getBoundingClientRect();
             myPointer.x = e.clientX - rect.left;
@@ -848,6 +956,54 @@
                     activeSpark = null;
                 }
             }
+                else if (data.type === 'mode_change_sync') {
+    partnerPointer.currentMode = data.mode;
+    partnerModeIndicator.textContent = `[${data.mode.toUpperCase()}]`;
+    partnerModeIndicator.style.color = modeIndicatorColors[data.mode] || '#444';
+    
+    // Синхронно включаем режим игры у партнера, если его переключили принудительно
+    currentMode = data.mode;
+    triggerFluidBackground(currentMode);
+    const targetBtn = document.querySelector(`.mode-btn[data-mode="${data.mode}"]`);
+    if (targetBtn) {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        targetBtn.classList.add('active');
+    }
+}
+// 👾 Новые обработчики состояний сессии Крестиков-Ноликов:
+else if (data.type === 'ttt_start') {
+    tttState.board = data.board;
+    tttState.myRole = data.role;
+    tttState.isMyTurn = data.isMyTurn;
+    tttState.gameStatusText = data.isMyTurn ? `Твой ход (${data.role})` : `Ход партнера...`;
+    triggerHaptic('success');
+}
+else if (data.type === 'ttt_update') {
+    tttState.board = data.board;
+    tttState.isMyTurn = data.isMyTurn;
+    
+    if (data.winner) {
+        tttState.isMyTurn = false;
+        if (data.winner === tttState.myRole) {
+            tttState.gameStatusText = '🎉 Ты победил(а)!';
+            comboScore += 50; // Бонус за стратегическую доминацию!
+            updateScoreUI();
+            createParticlesEffect(canvas.width / 2, canvas.height / 2, 'game_win');
+            triggerHaptic('success');
+        } else {
+            tttState.gameStatusText = '💥 Партнер выиграл';
+            triggerHaptic('error');
+        }
+        // Через 4 секунды автоматически перезапускаем поле
+        setTimeout(() => { if (currentMode === 'tic_tac_toe') sendNetData({ type: 'ttt_init' }); }, 4000);
+    } else if (data.isDraw) {
+        tttState.gameStatusText = '🤝 Ничья!';
+        triggerHaptic('warning');
+        setTimeout(() => { if (currentMode === 'tic_tac_toe') sendNetData({ type: 'ttt_init' }); }, 4000);
+    } else {
+        tttState.gameStatusText = data.isMyTurn ? `Твой ход (${tttState.myRole})` : `Ход партнера...`;
+    }
+}
             else if (data.type === 'game_spark_miss') {
                 activeSpark = null; // Удаляем искру, если время вышло
             }
