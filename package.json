@@ -16,4 +16,20 @@
   "grid": [[1,1,1,1,1],[1,0,0,0,1],[1,1,1,0,1],[1,0,0,0,1],[1,1,1,1,1]],
   "startPos": {"x": 1, "y": 1}
 }
+{
+  "type": "maze_move",
+  "role": "light",
+  "pctX": 0.452,
+  "pctY": 0.712
+}
+{
+  "type": "maze_light_sync",
+  "pctX": 0.452,
+  "pctY": 0.712
+}
+{
+  "type": "maze_player_sync",
+  "x": 3,
+  "y": 4
+}
 }
