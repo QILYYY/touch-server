@@ -130,30 +130,32 @@ wss.on('connection', (ws) => {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
                 
+                // 🎯 ЗАЩИТА ОТ ДВОЙНОГО КЛИКА ПЕРЕЗАПУСКА:
+                // Если доска уже чистая (все элементы null), значит раунд уже сброшен. 
+                // Игнорируем повторный запрос, чтобы не инвертировать роли дважды!
+                const isAlreadyReset = room.tttBoard.every(cell => cell === null);
+                if (isAlreadyReset && Object.keys(room.tttPlayers).length > 0) {
+                    return; 
+                }
+
                 const user0 = room.users[0]?.userId;
                 const user1 = room.users[1]?.userId;
-
-                // 1. Создаем пустой объект для новых ролей
                 const nextPlayers = {};
 
                 if (user0 && user1) {
-                    // 2. 🔄 ИНВЕРСИЯ: Проверяем, была ли у user0 роль в ПРЕДЫДУЩЕМ раунде
+                    // 🔄 ИНВЕРСИЯ: Меняем роли на противоположные
                     if (room.tttPlayers && room.tttPlayers[user0]) {
-                        // Если он был X — теперь станет O, если был O — станет X
                         nextPlayers[user0] = room.tttPlayers[user0] === 'X' ? 'O' : 'X';
                         nextPlayers[user1] = room.tttPlayers[user1] === 'X' ? 'O' : 'X';
                     } else {
-                        // Если это самый первый запуск игры в комнате
                         nextPlayers[user0] = 'X';
                         nextPlayers[user1] = 'O';
                     }
                 }
 
-                // 3. Перезаписываем состояние комнаты новыми ролями и чистим доску
                 room.tttBoard = Array(9).fill(null);
                 room.tttPlayers = nextPlayers;
 
-                // 4. Рассылаем пакеты обновленной игры
                 room.users.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         const playerRole = room.tttPlayers[client.userId] || 'O';
@@ -161,7 +163,7 @@ wss.on('connection', (ws) => {
                             type: 'ttt_start',
                             board: room.tttBoard,
                             role: playerRole,
-                            isMyTurn: playerRole === 'X' // Крестик всегда ходит первым!
+                            isMyTurn: playerRole === 'X'
                         }));
                     }
                 });
