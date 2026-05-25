@@ -172,7 +172,7 @@ wss.on('connection', (ws) => {
         else if (data.type === 'ttt_move') {
             if (currentRoom && rooms[currentRoom]) {
                 const room = rooms[currentRoom];
-                const cellIndex = data.index;
+                const cellIndex = data.cellIndex !== undefined ? data.cellIndex : data.index;
                 const playerRole = room.tttPlayers[ws.userId];
 
                 if (playerRole && room.tttBoard[cellIndex] === null) {
